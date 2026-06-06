@@ -14,6 +14,14 @@ from stable_baselines3.common.callbacks import EvalCallback
 from drl.trading_env import TradingEnv
 from loguru import logger
 
+# Decision PPO support
+try:
+    from drl.decision_head import DecisionHead, DECISION_ACTION_DIM
+    _HAS_DECISION_HEAD = True
+except Exception:
+    _HAS_DECISION_HEAD = False
+    DECISION_ACTION_DIM = 18
+
 # Paths
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(ROOT, "models")
@@ -73,3 +81,33 @@ def predict(obs, model=None, vec_env=None):
         
     action, _ = model.predict(obs, deterministic=True)
     return action[0]
+
+
+# ============================================================
+# DECISION PPO HELPERS (high-level brain integration)
+# ============================================================
+
+def get_decision_action_dim() -> int:
+    """Return the action dimensionality used by Decision PPO rich head."""
+    return DECISION_ACTION_DIM
+
+
+def make_decision_head(obs_dim: int, **kwargs):
+    """Return a DecisionHead instance ready for custom training / distillation."""
+    if not _HAS_DECISION_HEAD:
+        raise RuntimeError("DecisionHead not available (torch import issue in decision_head.py)")
+    return DecisionHead(input_dim=obs_dim, **kwargs)
+
+
+def decode_decision_action(action_vec, **decode_kwargs) -> dict:
+    """Convenience wrapper to decode rich Decision PPO action into DecisionSpec."""
+    from drl.trading_env import TradingEnv
+    return TradingEnv.decode_action(action_vec, decision_ppo=True, **decode_kwargs)
+
+
+def build_decision_ppo_env_kwargs(action_config: dict | None = None) -> dict:
+    """Return kwargs to pass to TradingEnv for Decision PPO mode."""
+    cfg = dict(action_config or {})
+    cfg.setdefault("decision_ppo", True)
+    cfg.setdefault("decision_action_dim", DECISION_ACTION_DIM)
+    return {"action_config": cfg, "action_version": "decision_ppo_v1"}
