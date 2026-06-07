@@ -15,8 +15,12 @@ _CFG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 class RiskEngine:
     def __init__(self):
-        with open(_CFG_PATH, "r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
+        if os.path.exists(_CFG_PATH):
+            with open(_CFG_PATH, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+        else:
+            # CI / no-config fallback — use safe paper defaults
+            cfg = {} or {}
 
         risk_cfg = cfg.get("risk", {})
         trading_cfg = cfg.get("trading", {})

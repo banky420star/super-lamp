@@ -81,7 +81,7 @@ class RewardScalingWrapper(gym.Wrapper):
         # Note: for full penalty separation would require info components; here global post-scale is safe/low-risk.
         return obs, scaled_reward, terminated, truncated, info
 
-ENGINEERED_FEATURE_COUNT = 21
+ENGINEERED_FEATURE_COUNT = 40
 DEFAULT_PORTFOLIO_FEATURE_COUNT = 9
 PORTFOLIO_FEATURE_COUNT = 9  # single source of truth for obs dim calculations
 MAX_PORTFOLIO_FEATURE_COUNT = 12
@@ -1432,13 +1432,21 @@ class TradingEnv(gym.Env):
         return self._cached_chronos_embedding
 
     def _build_portfolio_state(self) -> list[float]:
+        equity_ratio = self.equity / self.initial_balance
+        peak_equity = getattr(self, "peak_equity", self.initial_balance)
+        drawdown_norm = max(0.0, (peak_equity - self.equity) / self.initial_balance)
+        unrealized_pnl_norm = (self.equity - self.initial_balance) / self.initial_balance
+        vol_norm = float(np.std(self.recent_returns)) if len(self.recent_returns) > 1 else 0.0
         base = [
-            self.equity / self.initial_balance,
+            equity_ratio,
             self.position,
             float(np.mean(self.recent_returns)),
             float(self.memory_features.get("win_rate_norm", 0.0)),
             float(self.memory_features.get("expectancy_norm", 0.0)),
             float(self.memory_features.get("loss_ratio_norm", 0.0)),
+            drawdown_norm,
+            unrealized_pnl_norm,
+            vol_norm,
         ]
         if self.portfolio_feature_count <= 0:
             return []

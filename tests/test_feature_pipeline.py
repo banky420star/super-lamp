@@ -30,7 +30,7 @@ def test_env_feature_versions_have_expected_shape():
     engineered = build_env_feature_matrix(_sample_df(), feature_version=ENGINEERED_V2)
     ultimate = build_env_feature_matrix(_sample_df(), feature_version=ULTIMATE_150)
 
-    assert engineered.shape[1] == 21
+    assert engineered.shape[1] == 40
     assert ultimate.shape[1] >= 150
 
 
