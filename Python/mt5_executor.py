@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from loguru import logger
 from Python.mt5_compat import mt5 as _mt5
@@ -74,8 +75,17 @@ class MT5Executor:
 
         if self._is_live:
             try:
-                if not _mt5.initialize():
-                    logger.error("MT5 initialize() failed — falling back to dry-run")
+                # PASS PATH EXPLICITLY: the venv launcher re-execs system Python
+                # which does NOT have the MetaTrader5 module on its path, so the
+                # no-arg mt5.initialize() fails with -10003 'IPC initialize
+                # failed, MetaTrader 5 x64 not found'. Explicit path forces the
+                # MT5 terminal64.exe to be used.
+                _mt5_path = os.environ.get(
+                    "AGI_MT5_TERMINAL_PATH",
+                    r"C:\Program Files\MetaTrader 5\terminal64.exe",
+                )
+                if not _mt5.initialize(path=_mt5_path):
+                    logger.error("MT5 initialize() failed - falling back to dry-run")
                     self._is_live = False
             except Exception as e:
                 logger.error(f"MT5 init error: {e}")
@@ -927,7 +937,15 @@ class MT5Executor:
             positions = _mt5.positions_get(symbol=symbol)
         if positions:
             for p in positions:
-                if p.type == _mt5.ORDER_TYPE_BUY or (isinstance(p, dict) and p.get("type") == "BUY"):
+                if isinstance(p, dict):
+                    pos_type = p.get("type")
+                    is_buy = (pos_type == "BUY")
+                else:
+                    try:
+                        is_buy = (p.type == _mt5.ORDER_TYPE_BUY)
+                    except AttributeError:
+                        is_buy = False
+                if is_buy:
                     longs.append(p)
                 else:
                     shorts.append(p)
