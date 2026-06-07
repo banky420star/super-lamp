@@ -61,6 +61,7 @@ import time
 import subprocess
 import json
 import threading
+from typing import Any, Optional
 try:
     import msvcrt  # Windows non-blocking key input for 'p' toggle in Live TUI
 except Exception:
@@ -790,6 +791,17 @@ TRAINING_HEALTH_FILE = LOGS_DIR / "training_health.json"
 MINI_STATUS_FILE = REPO_ROOT / "runtime" / "agent_status" / "tui_mini_pipeline_watcher_agent.json"
 # === end mini additions ===
 
+# === SELF-EVOLUTION DEEP VISIBILITY (for --mini and swarm highlight) ===
+SELF_EVOL_DIR = REPO_ROOT / "runtime" / "self_evolution"
+EXPERIENCE_MEM_PATH = REPO_ROOT / "runtime" / "experience_memory.jsonl"
+EXPERIENCE_AGENT_STATUS = REPO_ROOT / "runtime" / "agent_status" / "experience_memory_agent.json"
+SUPERVISOR_AGENT = REPO_ROOT / "runtime" / "agent_status" / "master_self_evolution_supervisor_agent.json"
+SUPERVISOR_STATE = SELF_EVOL_DIR / "supervisor_state.json"
+RETRAIN_JOBS_DIR = REPO_ROOT / "runtime" / "retraining_jobs"
+META_OPTIMIZER_DIR = REPO_ROOT / "runtime" / "meta_optimizer"
+VALIDATION_RESULTS_DIR = REPO_ROOT / "runtime" / "validation_results"
+# === end self-evol additions ===
+
 
 def _load_recent_rich_decisions(limit: int = 12) -> list[dict]:
     """Load rich execution reports (with embedded full TradeDecision spec when available).
@@ -1157,6 +1169,118 @@ def _compute_mini_alerts(di: dict, fp: dict, ms: dict, ea: dict, al: dict) -> li
     return alerts[:5]
 
 
+# === NEW: Self-Evolution Observability Loaders (for --mini + rich brain state) ===
+# Safe file-only (no hard deps). Shows meta_suggested (hardened reward/FI/top patterns from real XAU),
+# ExperienceMemory (stats + pattern+timing+regime+edge), Supervisor strategy+decisions, Validation findings.
+
+def _load_mini_meta_overrides() -> dict:
+    """Latest meta_suggested_training_overrides: exact hardened reward, FI boosts, top patterns from XAU overnight artifact."""
+    d = {"reward": "—", "penalty": 1.0, "fi_patterns": 1.0, "fi_timing": 1.0, "top_patterns": "—", "source": "none"}
+    try:
+        if RETRAIN_JOBS_DIR.exists():
+            cands = sorted(RETRAIN_JOBS_DIR.glob("meta_suggested_training_overrides_*.json"), key=lambda x: x.stat().st_mtime, reverse=True)
+            if cands:
+                j = json.loads(cands[0].read_text(encoding="utf-8", errors="ignore"))
+                d["reward"] = j.get("reward_profile", j.get("suggest_output_recommended_profile", "hardened"))
+                d["penalty"] = j.get("penalty_scale", 0.9)
+                fi = j.get("feature_importance_overrides", {}) or {}
+                d["fi_patterns"] = fi.get("patterns", 1.29)
+                d["fi_timing"] = fi.get("timing", 1.38)
+                d["top_patterns"] = _safe_list(j.get("top_boost_patterns", []), 3)
+                d["source"] = cands[0].name
+                return d
+        # fallback meta_optimizer
+        if META_OPTIMIZER_DIR.exists():
+            for f in sorted(META_OPTIMIZER_DIR.glob("*.json"), key=lambda x:x.stat().st_mtime, reverse=True)[:2]:
+                j = json.loads(f.read_text(encoding="utf-8", errors="ignore"))
+                if "hardened" in str(j).lower() or "reward_profile" in str(j):
+                    d["reward"] = j.get("reward_profile", "hardened")
+                    d["source"] = f.name
+                    break
+    except Exception:
+        pass
+    return d
+
+
+def _load_mini_experience_memory() -> dict:
+    """ExperienceMemory stats + top high-value (pattern + timing + regime + edge_score)."""
+    s = {"size": 0, "high_val": 0, "avg_edge": 0.0, "examples": [], "source": "none"}
+    try:
+        if EXPERIENCE_MEM_PATH.exists():
+            lines = EXPERIENCE_MEM_PATH.read_text(encoding="utf-8", errors="ignore").strip().splitlines()[-300:]
+            exps = [json.loads(ln) for ln in lines if ln.strip()]
+            s["size"] = len(exps)
+            if exps:
+                sorted_e = sorted(exps, key=lambda e: float(e.get("edge_score", e.get("learning_priority",0)) or 0), reverse=True)[:3]
+                s["high_val"] = sum(1 for e in exps if float(e.get("edge_score",0) or 0)>=0.55)
+                edges = [float(e.get("edge_score",0) or 0) for e in exps]
+                s["avg_edge"] = round(sum(edges)/max(1,len(edges)),3)
+                for e in sorted_e:
+                    pat = _safe_list(e.get("classical_patterns") or [], 1)
+                    tim = _safe_text((e.get("timing_context") or {}).get("news_proximity") or "", 10)
+                    reg = _safe_text(e.get("regime") or "?", 8)
+                    ed = _safe_float(e.get("edge_score",0),0,2)
+                    s["examples"].append(f"{pat} t={tim} r={reg} e={ed}")
+                s["source"] = "experience_memory.jsonl"
+        ag = _load_json_safe(EXPERIENCE_AGENT_STATUS)  # reuse if helper, else direct
+        if not s["size"] and ag:
+            s["source"] = "experience_memory_agent (ready)"
+            s["note"] = "0 experiences — seed via validation pattern_profit + timing"
+    except Exception:
+        pass
+    return s
+
+
+def _load_json_safe(p: Path) -> Optional[dict]:
+    try:
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8", errors="ignore"))
+    except Exception:
+        pass
+    return None
+
+
+def _load_mini_supervisor() -> dict:
+    """Master Self-Evolution Supervisor current strategy + recent decisions."""
+    sup = {"strategy": "unknown", "status": "—", "recent": [], "source": "none"}
+    try:
+        j = _load_json_safe(SUPERVISOR_AGENT)
+        if j:
+            sup["strategy"] = j.get("current_strategy", "regime_adaptation_boost")
+            sup["status"] = j.get("status", "ACTIVE")[:20]
+            acts = (j.get("last_cycle_result", {}) or {}).get("actions_taken", []) or []
+            sup["recent"] = [str(a.get("type", a.get("action","dec")))[:28] for a in acts[-3:]]
+            sup["source"] = "master_self_evolution_supervisor_agent.json"
+        st = _load_json_safe(SUPERVISOR_STATE)
+        if st and st.get("current_strategy"):
+            sup["strategy"] = st["current_strategy"]
+    except Exception:
+        pass
+    return sup
+
+
+def _load_mini_validation_findings() -> dict:
+    """StandardizedValidationResult key findings: pattern profitability + time_exit_effectiveness."""
+    f = {"campaign": "—", "top_pat": "—", "time_exit": "—", "rec": "—", "source": "none"}
+    try:
+        if VALIDATION_RESULTS_DIR.exists():
+            c = sorted(VALIDATION_RESULTS_DIR.glob("standardized_validation_*.json"), key=lambda x: x.stat().st_mtime, reverse=True)
+            if c:
+                j = json.loads(c[0].read_text(encoding="utf-8", errors="ignore"))
+                f["campaign"] = j.get("campaign_id", c[0].name)[:28]
+                f["rec"] = j.get("overall_recommendation", "ITERATE")
+                pp = (j.get("pattern_profitability", {}) or {}).get("candidate", {})
+                top = sorted([(k, v.get("pnl",0)) for k,v in pp.items() if isinstance(v,dict)], key=lambda x:-x[1])[:2]
+                f["top_pat"] = ", ".join(f"{p}({round(pn)})" for p,pn in top)
+                te = (j.get("time_exit_effectiveness", {}) or {}).get("candidate", {})
+                if te:
+                    f["time_exit"] = f"max_hold={_safe_float(te.get('max_hold',{}).get('pnl',0))} news={_safe_float(te.get('news_forced',{}).get('pnl',0))}"
+                f["source"] = c[0].name
+    except Exception:
+        pass
+    return f
+
+
 # =============================================================================
 # END MINI LOADERS
 # =============================================================================
@@ -1350,7 +1474,30 @@ def render_mini_pipeline_watcher() -> "Panel":
 
     txt.append("\nSources: runtime/agent_status/* + logs/PIPELINE_DECISIONS.jsonl + execution_feedback.jsonl + timing insights + data/test caches | Pure-Py Exec primary + TimeExitSpec | Master Coordinator wave synthesis\n", style="dim")
 
-    return Panel(txt, title="TUI Mini Pipeline Watcher - Full Timing-Aware Autonomous Pipeline (dense)", border_style="bright_green", padding=(0, 0))
+    # === NEW: Self-Evolution deep visibility injected live into --mini (safe, no crash, real XAU overnight artifacts) ===
+    try:
+        mo = _load_mini_meta_overrides()
+        em = _load_mini_experience_memory()
+        su = _load_mini_supervisor()
+        vf = _load_mini_validation_findings()
+        fc = None
+        try:
+            for pth in sorted((REPO_ROOT / "runtime" / "agent_status").glob("full_cycle_with_real_overnight*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:1]:
+                fc = json.loads(pth.read_text(encoding="utf-8", errors="ignore"))
+                break
+        except Exception:
+            pass
+        txt.append("\n> 🧠 SELF-EVOLUTION (meta/EM/Supervisor/Validation live)\n", style="bold bright_magenta")
+        txt.append(f"   META_OVERRIDES: hardened={mo['reward']} pen={mo['penalty']} FI(pat={_safe_float(mo['fi_patterns'])} tim={_safe_float(mo['fi_timing'])}) top={mo['top_patterns']}\n", style="magenta")
+        txt.append(f"   EXPMEM: {em['size']} exps ({em['high_val']} high-val) avg_edge={_safe_float(em['avg_edge'],0,3)}  {em.get('examples',[ '—' ])[0] if em.get('examples') else 'seed from overnight pattern_profitability'}\n", style="cyan")
+        txt.append(f"   SUPERVISOR: {su['strategy']} | recent={su['recent'][0] if su.get('recent') else '—'}\n", style="yellow")
+        txt.append(f"   VAL (pat+time_exit): {vf['top_pat']} | {vf['time_exit']} rec={vf['rec']}\n", style="green")
+        nxt = (fc or {}).get("clear_next_action_recommendation") or "Launch retrain with overrides from runtime/retraining_jobs/"
+        txt.append(f"   NEXT ACTION (orchestrator/full_cycle): {_safe_text(nxt, 78)}\n", style="bold white")
+    except Exception as _e:
+        txt.append(f"\n> SELF-EVOLUTION (graceful): {_safe_text(str(_e), 55)}\n", style="dim")
+
+    return Panel(txt, title="TUI Mini Pipeline Watcher - Full Timing-Aware Autonomous Pipeline (dense) + Self-Evolution Brain", border_style="bright_green", padding=(0, 0))
 
 
 def get_rich_decision_execution_panel() -> Panel:
@@ -2196,6 +2343,28 @@ def _safe_swarm_text(s: str, max_len: int = 80) -> str:
     return s
 
 
+def _safe_float(val: Any, default: float = 0.0, ndigits: int = 2) -> str:
+    """Safe numeric for FI boosts / edge / pnl (used in self-evol panels)."""
+    try:
+        if val is None:
+            return f"{default:.{ndigits}f}"
+        f = float(val)
+        return f"{f:.{ndigits}f}"
+    except Exception:
+        return f"{default:.{ndigits}f}"
+
+
+def _safe_list(val: Any, max_items: int = 4, default: str = "—") -> str:
+    """Render list of patterns etc safely."""
+    if not val:
+        return default
+    try:
+        items = [str(x) for x in (val if isinstance(val, (list, tuple)) else [val])][:max_items]
+        return ", ".join(items)
+    except Exception:
+        return default
+
+
 def render_swarm_panel() -> "Panel":
     """
     Clean, high-visibility "Swarm Status" panel for the operator.
@@ -2271,8 +2440,14 @@ def render_swarm_panel() -> "Panel":
         else:
             updated = f"{int(age/3600)}h"
 
+        name = a["name"]
+        # Prominently highlight recent self-evolution agents in swarm/agent_status panel
+        is_evol = any(k in name.lower() for k in ["self_evolution", "master_self", "meta_optimizer", "experience_memory", "validation_harness", "retraining_orchestrator", "supervisor"])
+        if is_evol:
+            name = "🧠 " + name
+            # make name stand out
         table.add_row(
-            _safe_swarm_text(a["name"], 22),
+            _safe_swarm_text(name, 24),
             _safe_swarm_text(a["workstream"], 18) or "—",
             _safe_swarm_text(a["phase"], 18) or "—",
             _safe_swarm_text(a["current_focus"], 55) or Text("—", style="dim"),
@@ -2287,7 +2462,7 @@ def render_swarm_panel() -> "Panel":
     content = Group(table, Text(""), footer)
     return Panel(
         content,
-        title=_safe_text("Swarm Status — Parallel Agent Workstreams (high visibility)"),
+        title=_safe_text("Swarm Status — Parallel Agent Workstreams (high visibility)  🧠 Self-Evolution agents (supervisor/meta/EM/validation) highlighted"),
         border_style="bright_magenta",
         padding=(0, 1),
         box=box.ROUNDED,
@@ -2699,7 +2874,12 @@ def main():
 
     try:
         initial = render_mini_pipeline_watcher() if _view_mode == "mini" else build_dashboard()
-        with Live(initial, refresh_per_second=0.2, screen=True, transient=True) as live:
+        # screen=True often produces blank/black screen on basic Windows console.
+        # Default off for compatibility. Set MINI_TUI_SCREEN=1 to force.
+        use_screen = os.environ.get("MINI_TUI_SCREEN", "0") == "1"
+        # Significantly reduced refresh rate. Control with $env:MINI_TUI_FPS=1 (or 0.5)
+        fps = float(os.environ.get("MINI_TUI_FPS", "0.5"))
+        with Live(initial, refresh_per_second=fps, screen=use_screen, transient=True, vertical_overflow="crop") as live:
             last_write = time.time()
             while not _stop_flag:
                 time.sleep(5 if _view_mode == "mini" else 7)
