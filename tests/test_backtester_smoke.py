@@ -10,14 +10,15 @@ from Python import backtester
 
 
 class _FakeModel:
-    def predict(self, obs, deterministic=True):
-        return np.array([[0.1]], dtype=np.float32), None
-        # Backtester integration attributes
+    def __init__(self):
         self.envs = [self]
         self.feature_data = np.zeros((100, 40), dtype=np.float32)
         self.n_features = 40
         self.portfolio_feature_count = 9
         self._use_regime = False
+
+    def predict(self, obs, deterministic=True):
+        return np.array([[0.1]], dtype=np.float32), None
 
 
 class _FakeVecEnv(gym.Env):
@@ -25,7 +26,6 @@ class _FakeVecEnv(gym.Env):
 
     def __init__(self):
         super().__init__()
-        import gymnasium as gym
         self.training = False
         self.norm_reward = False
         self._step = 0
@@ -51,6 +51,33 @@ class _FakeVecEnv(gym.Env):
         self._equity = 10000.0
         self._position = 0.0
         return np.zeros(self.observation_space.shape[0], dtype=np.float32), {}
+
+    def step(self, action):
+        self._step += 1
+        self._position = float(action[0])
+        self._equity += 5.0
+        terminated = self._step >= 12
+        truncated = False
+        info = {
+            "equity": self._equity,
+            "cost": 0.1,
+            "position": self._position,
+            "reward_components": {
+                "growth": 0.001,
+                "payoff": 0.001,
+                "sharpe_bonus": 0.001,
+                "drawdown_penalty": 0.0,
+                "cost_penalty": 0.0,
+                "churn_penalty": 0.0,
+            },
+        }
+        return (
+            np.zeros(self.observation_space.shape[0], dtype=np.float32),
+            0.1,
+            terminated,
+            truncated,
+            info,
+        )
 class _MockRMS:
     """Picklable mock for VecNormalize obs_rms."""
     def __init__(self):
@@ -70,31 +97,7 @@ class _MockVN:
 
 
 
-    def step(self, action):
-        self._step += 1
-        self._position = float(action[0][0])
-        self._equity += 5.0
-        done = self._step >= 12
-        info = [
-            {
-                "equity": self._equity,
-                "cost": 0.1,
-                "position": self._position,
-                "reward_components": {
-                    "growth": 0.001,
-                    "payoff": 0.001,
-                    "sharpe_bonus": 0.001,
-                    "drawdown_penalty": 0.0,
-                    "cost_penalty": 0.0,
-                    "churn_penalty": 0.0,
-                },
-            }
-        ]
-        return np.zeros((1, 8), dtype=np.float32), 0.1, done, info
-
-
 import pytest
-@pytest.mark.skip(reason="backtester mock needs full gym.Env for vecnorm recovery")
 def test_backtester_smoke(monkeypatch):
     n = 500
     df = pd.DataFrame(
