@@ -30,36 +30,34 @@ jobs:
 
       - name: Static compile check (verbose)
         run: |
-          python - <<'PY'
+          python -c "
           import os, py_compile, sys, traceback
-          roots = ["Python","drl","training","tools","scripts"]
+          roots = ['Python','drl','training','tools','scripts']
           failed = False
           for r in roots:
               if not os.path.exists(r):
                   continue
-              print(f"Checking directory: {r}")
+              print('Checking directory:', r)
               for root, _, files in os.walk(r):
                   for f in files:
-                      if f.endswith(".py"):
-                          path = os.path.join(root, f)
-                          try:
-                              py_compile.compile(path, doraise=True)
-                          except py_compile.PyCompileError:
-                              print("-----")
-                              print("FAILED:", path)
-                              traceback.print_exc()
-                              failed = True
-                          except Exception as e:
-                              print("-----")
-                              print("SKIPPED:", path, "-", e)
+                      if not f.endswith('.py'):
+                          continue
+                      path = os.path.join(root, f)
+                      try:
+                          py_compile.compile(path, doraise=True)
+                      except py_compile.PyCompileError:
+                          print('-----')
+                          print('FAILED:', path)
+                          traceback.print_exc()
+                          failed = True
           if failed:
-              print("
-Compile errors found.")
+              print()
+              print('Compile errors found.')
               sys.exit(1)
           else:
-              print("
-All .py files compiled successfully.")
-          PY
+              print()
+              print('All .py files compiled successfully.')
+          "
 
       - name: Run tests
         run: pytest -q
@@ -100,36 +98,34 @@ All .py files compiled successfully.")
 
       - name: Static compile check (verbose)
         run: |
-          python - <<'PY'
+          python -c "
           import os, py_compile, sys, traceback
-          roots = ["Python","drl","training","tools","scripts"]
+          roots = ['Python','drl','training','tools','scripts']
           failed = False
           for r in roots:
               if not os.path.exists(r):
                   continue
-              print(f"Checking directory: {r}")
+              print('Checking directory:', r)
               for root, _, files in os.walk(r):
                   for f in files:
-                      if f.endswith(".py"):
-                          path = os.path.join(root, f)
-                          try:
-                              py_compile.compile(path, doraise=True)
-                          except py_compile.PyCompileError:
-                              print("-----")
-                              print("FAILED:", path)
-                              traceback.print_exc()
-                              failed = True
-                          except Exception as e:
-                              print("-----")
-                              print("SKIPPED:", path, "-", e)
+                      if not f.endswith('.py'):
+                          continue
+                      path = os.path.join(root, f)
+                      try:
+                          py_compile.compile(path, doraise=True)
+                      except py_compile.PyCompileError:
+                          print('-----')
+                          print('FAILED:', path)
+                          traceback.print_exc()
+                          failed = True
           if failed:
-              print("
-Compile errors found.")
+              print()
+              print('Compile errors found.')
               sys.exit(1)
           else:
-              print("
-All .py files compiled successfully.")
-          PY
+              print()
+              print('All .py files compiled successfully.')
+          "
 
       - name: Verify Pair Pipeline
         run: |
