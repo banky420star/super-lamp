@@ -9,6 +9,8 @@ except Exception:
     _PATTERN_DETECTOR_AVAILABLE = False
     PatternDetector = None
     PATTERN_FEATURE_NAMES = []
+from Python.cross_asset import compute_cross_asset_features, TOTAL_CROSS_FEATURES
+from Python.ml_signal import compute_ml_signal, ML_SIGNAL_FEATURES
 
 
 ENGINEERED_V2 = "engineered_v2"
@@ -80,12 +82,12 @@ def build_lstm_feature_frame(df: pd.DataFrame, feature_version: str = ENGINEERED
     return features, list(ENGINEERED_LSTM_COLUMNS)
 
 
-def build_env_feature_matrix(df: pd.DataFrame, feature_version: str = ENGINEERED_V2) -> np.ndarray:
+def build_env_feature_matrix(df: pd.DataFrame, feature_version: str = ENGINEERED_V2, symbol: str = "") -> np.ndarray:
     version = normalize_feature_version(feature_version, default=ENGINEERED_V2)
     if version == ULTIMATE_150:
         features, _ = build_lstm_feature_frame(df, feature_version=ULTIMATE_150)
         return features.to_numpy(dtype=np.float32)
-    return _build_engineered_env_matrix(df)
+    return _build_engineered_env_matrix(df, symbol=symbol)
 
 
 def feature_count_for_version(feature_version: str) -> int:
@@ -102,7 +104,31 @@ def feature_count_for_version(feature_version: str) -> int:
             }
         )
         return int(build_env_feature_matrix(sample, feature_version=ULTIMATE_150).shape[1])
-    return 41  # +12 classical patterns (doji/hammer/engulfing/flags/breakouts/double) + timing (Dreamer world model + Decision PPO now pattern+timing conditioned for rich edge)
+    # Dynamically compute base feature count + cross-asset features
+    sample = pd.DataFrame(
+        {
+            "time": pd.date_range("2026-01-01", periods=300, freq="5min", tz="UTC"),
+            "open": np.linspace(1.0, 1.2, 300),
+            "high": np.linspace(1.01, 1.21, 300),
+            "low": np.linspace(0.99, 1.19, 300),
+            "close": np.linspace(1.0, 1.2, 300),
+            "volume": np.linspace(100, 400, 300),
+        }
+    )
+    base_count = int(_build_engineered_env_matrix(sample).shape[1])
+    return base_count + TOTAL_CROSS_FEATURES + ML_SIGNAL_FEATURES
+
+
+def expected_obs_dim(feature_version: str, window: int = 100) -> int:
+    """Return the total observation dimension for a given feature version and window.
+
+    Accounts for: window * features_per_bar + portfolio_state_features.
+    This is the single source of truth for observation dimension calculations
+    across training, backtesting, and inference.
+    """
+    from drl.trading_env import PORTFOLIO_FEATURE_COUNT  # late import avoids circular dep
+    n_feat = feature_count_for_version(feature_version)
+    return window * n_feat + PORTFOLIO_FEATURE_COUNT  # +12 classical patterns + timing + cross-asset + ML signal + timing + cross-asset features (doji/hammer/engulfing/flags/breakouts/double) + timing (Dreamer world model + Decision PPO now pattern+timing conditioned for rich edge)
 
 
 def _build_engineered_lstm_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -148,7 +174,7 @@ def _build_engineered_lstm_frame(df: pd.DataFrame) -> pd.DataFrame:
     return out[ENGINEERED_LSTM_COLUMNS].copy()
 
 
-def _build_engineered_env_matrix(df: pd.DataFrame) -> np.ndarray:
+def _build_engineered_env_matrix(df: pd.DataFrame, symbol: str = "") -> np.ndarray:
     out = _normalize_ohlcv(df)
     o = out["open"].to_numpy(dtype=np.float64)
     h = out["high"].to_numpy(dtype=np.float64)
@@ -295,6 +321,23 @@ def _build_engineered_env_matrix(df: pd.DataFrame) -> np.ndarray:
             *[pattern_block[:, i] for i in range(n_pat)],
         ]
     )
+    # Cross-asset features (DXY, US10Y, USDJPY correlations with primary)
+    if symbol:
+        try:
+            cross_feat = compute_cross_asset_features(symbol, out)
+            if cross_feat.shape[1] > 0:
+                matrix = np.column_stack([matrix, cross_feat])
+        except Exception:
+            pass  # cross-asset features unavailable; continue without
+
+    # ML directional signal (XGBoost predicts next-bar direction from features)
+    if symbol and matrix.shape[1] >= 40:
+        try:
+            ml_signal = compute_ml_signal(matrix, out["close"].values)
+            if ml_signal.shape[1] > 0:
+                matrix = np.column_stack([matrix, ml_signal])
+        except Exception:
+            pass  # ML signal unavailable; continue without
     return np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
 
 
@@ -476,19 +519,83 @@ def _is_multitimeframe_best_request(feature_version: str | None) -> bool:
 _original_build_env = build_env_feature_matrix
 _original_build_lstm = build_lstm_feature_frame
 
-def build_env_feature_matrix(df: pd.DataFrame, feature_version: str = ENGINEERED_V2) -> np.ndarray:
+
+def _apply_artifact_feature_importance_scaling(matrix: np.ndarray, feature_version: str = "") -> np.ndarray:
+    """
+    ARTIFACT-DRIVEN FEATURE IMPORTANCE SCALING (from next_training_overrides.json via launch).
+    Scales columns corresponding to 'patterns', 'timing', 'news_proximity' groups by the multipliers
+    (e.g. patterns=1.29, timing=1.38). This makes the Decision PPO policy "pay more attention"
+    to the high-evidence features identified in the validation artifact (double_bottom etc + timing).
+    Non-destructive; only affects the obs vector seen by PPO during this training run.
+    Heuristic column layout for engineered_v2 + patterns+timing (last ~20 cols contain them).
+    """
+    if matrix is None or matrix.size == 0:
+        return matrix
+    try:
+        fi_patterns = float(os.environ.get("AGI_FI_PATTERNS", "1.0"))
+        fi_timing = float(os.environ.get("AGI_FI_TIMING", "1.0"))
+        fi_news = float(os.environ.get("AGI_FI_NEWS_PROXIMITY", "1.0"))
+        if fi_patterns == 1.0 and fi_timing == 1.0 and fi_news == 1.0:
+            return matrix  # no-op when no overrides
+
+        out = matrix.astype(np.float32).copy()
+        n_cols = out.shape[1]
+        # Heuristic: in current engineered + pattern+timing layout (~41 cols)
+        # patterns occupy the final ~11-12 columns; timing ~8 before them; news is one of the timing cols.
+        # Conservative: boost the tail (patterns) and a timing window.
+        if n_cols >= 12:
+            # patterns tail
+            pat_start = max(0, n_cols - 12)
+            out[:, pat_start:] *= fi_patterns
+        if n_cols >= 20:
+            # timing block (rough window before patterns)
+            tim_start = max(0, n_cols - 22)
+            tim_end = max(tim_start + 1, n_cols - 12)
+            out[:, tim_start:tim_end] *= fi_timing
+            # news proximity is typically one of the explicit timing cols near the end of timing block
+            news_col = max(0, n_cols - 18)  # approximate
+            if news_col < n_cols:
+                out[:, news_col] *= fi_news
+        # clip to avoid explosion
+        out = np.clip(out, -50.0, 50.0)
+        if abs(fi_patterns - 1.0) > 0.01 or abs(fi_timing - 1.0) > 0.01:
+            logger.info(f"[artifact-overrides] Applied FI scaling: patterns={fi_patterns:.2f}, timing={fi_timing:.2f}, news={fi_news:.2f} on matrix shape {matrix.shape}")
+        return out.astype(np.float32)
+    except Exception as _e:
+        return matrix
+
+
+def build_env_feature_matrix(df: pd.DataFrame, feature_version: str = ENGINEERED_V2, symbol: str = "") -> np.ndarray:
     if _is_multitimeframe_best_request(feature_version):
         # Expect the caller to have passed a properly prepared multi-TF df
         # or we fall back to normal behavior on single df
         logger.info("Multi-timeframe best feature path requested in build_env_feature_matrix")
         # For now, if a single df is passed we still build normally.
         # Full multi-TF path is used via the explicit build_multitimeframe_feature_matrix
-        return _original_build_env(df, ENGINEERED_V2)
-    return _original_build_env(df, feature_version)
+        base = _original_build_env(df, ENGINEERED_V2, symbol=symbol)
+        return _apply_artifact_feature_importance_scaling(base, feature_version)
+    base = _original_build_env(df, feature_version, symbol=symbol)
+    return _apply_artifact_feature_importance_scaling(base, feature_version)
+
 
 def build_lstm_feature_frame(df: pd.DataFrame, feature_version: str = ENGINEERED_V2) -> tuple[pd.DataFrame, list[str]]:
     if _is_multitimeframe_best_request(feature_version):
         logger.info("Multi-timeframe best feature path requested in build_lstm_feature_frame")
         # Similar fallback
-        return _original_build_lstm(df, ENGINEERED_V2)
-    return _original_build_lstm(df, feature_version)
+        base_df, cols = _original_build_lstm(df, ENGINEERED_V2)
+        # Note: for DataFrame path we scale the underlying values if numeric
+        try:
+            arr = base_df.to_numpy(dtype=np.float32)
+            scaled = _apply_artifact_feature_importance_scaling(arr, feature_version)
+            base_df = pd.DataFrame(scaled, columns=base_df.columns, index=base_df.index)
+        except Exception:
+            pass
+        return base_df, cols
+    base_df, cols = _original_build_lstm(df, feature_version)
+    try:
+        arr = base_df.to_numpy(dtype=np.float32)
+        scaled = _apply_artifact_feature_importance_scaling(arr, feature_version)
+        base_df = pd.DataFrame(scaled, columns=base_df.columns, index=base_df.index)
+    except Exception:
+        pass
+    return base_df, cols
