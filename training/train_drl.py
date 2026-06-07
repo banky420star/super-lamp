@@ -626,7 +626,7 @@ def _policy_kwargs_for(feature_version: str) -> dict:
         _attn_heads = int(os.environ.get("AGI_ATTENTION_HEADS", "4"))
         return dict(
             features_extractor_class=AdaptiveLSTMFeatureExtractor,
-            features_extractor_kwargs=dict(features_dim=256, window_size=100, num_heads=_attn_heads,                                               regime_dim=NUM_REGIMES + 1 if os.environ.get("AGI_USE_REGIME", "0") == "1" else 0),
+            features_extractor_kwargs=dict(features_dim=256, window_size=100, num_heads=_attn_heads,                                               regime_dim=NUM_REGIMES + 1 if os.environ.get("AGI_USE_REGIME", "0") == "1" else 0, use_feature_gate=os.environ.get("AGI_USE_FEATURE_GATE", "0") == "1"),
             net_arch=[512, 256],
             activation_fn=torch.nn.LeakyReLU,
             log_std_init=log_std_init,

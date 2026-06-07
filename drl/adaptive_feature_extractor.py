@@ -134,7 +134,7 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
     after the LSTM as before.
     """
 
-    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0):
+    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0, use_feature_gate=False):
         total_obs = int(observation_space.shape[0])
         self.seq_window = int(window_size)
         self.regime_dim = int(regime_dim)
@@ -160,6 +160,16 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
         )
         self.attention = MultiHeadAttentionPooling(self.lstm_hidden, num_heads=num_heads)
         self.lstm_norm = torch.nn.LayerNorm(self.lstm_hidden)
+
+        # Regime-conditional feature group gating
+        if use_feature_gate and self.regime_dim > 0:
+            self.feature_gate = FeatureGroupGate(
+                hidden_dim=self.lstm_hidden,
+                num_groups=4,
+                num_regimes=self.regime_dim,
+            )
+        else:
+            self.feature_gate = None
 
     def forward(self, observations):
         batch_size = observations.shape[0]
