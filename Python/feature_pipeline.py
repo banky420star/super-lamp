@@ -424,7 +424,7 @@ def _build_ultimate_feature_frame(df: pd.DataFrame) -> pd.DataFrame:
             ("15min", "m15"),
             ("1h", "h1"),
             ("4h", "h4"),
-            ("1d", "d1"),
+            ("1D", "d1"),
         ]
         for rule, label in resamples:
             htf = (
