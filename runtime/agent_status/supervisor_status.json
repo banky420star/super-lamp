@@ -1,0 +1,21 @@
+﻿{
+    "note":  "periodic heartbeat + self-monitor",
+    "iteration":  3455,
+    "timestamp":  "2026-06-07T14:23:21.2850014Z",
+    "watcher_auto_launched":  true,
+    "next_full_cycle_recommended":  false,
+    "last_training_recovery":  "2026-06-04T19:52:27.0428879+02:00",
+    "disk_ok":  null,
+    "meta_overrides":  {
+                           "loaded":  true,
+                           "penalty_scale":  0.90,
+                           "source":  "C:\\supreme-chainsaw\\runtime\\validation_results\\standardized_validation_XAUUSDm_4w_val_20260528_145148_overnight_1m.json",
+                           "reward_profile":  "hardened"
+                       },
+    "supervisor_version":  "production_hardened_20260528",
+    "mt5_running":  null,
+    "healthy":  false,
+    "self_monitor_last_call":  "2026-06-07T14:23:21.2850014Z",
+    "last_candidate_state":  "YES (v4_robust post-fix clean fallback, age 13m, cand=20260607_160114)",
+    "training_recovery_attempts":  3
+}

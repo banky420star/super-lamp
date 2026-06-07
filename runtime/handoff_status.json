@@ -1,0 +1,12 @@
+{
+  "ts": "2026-06-07T12:07:15.720691+00:00",
+  "candidate": "MOCK_POSTFIX_20260607_120652",
+  "decision": "HOLD_FOR_REVIEW",
+  "core_gates_pass": false,
+  "mql5_shadow_prepared": true,
+  "mql5_deploy_triggered": true,
+  "harness_auto_launched": false,
+  "execution_type": "decision_ppo",
+  "execution_stack": "DecisionPPO+Execution",
+  "source": "promote_candidate_to_paper (Post-Candidate Handoff)"
+}

@@ -1,0 +1,1348 @@
+[32m2026-06-07 14:59:41.019[0m | [34m[1mDEBUG   [0m | [36mPython.autonomous.regime_controller[0m:[36m<module>[0m:[36m84[0m - [34m[1mPatternDetector unavailable: No module named 'Python.patterns.pattern_detector'[0m
+[32m2026-06-07 14:59:45.775[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_train_once[0m:[36m1227[0m - [1mDRL Training | symbols=['XAUUSDm'] | timesteps=50,000 | period=90d | tf=5m | candles=80,000 | per_symbol=True | initial_balance=10000.00 | features=engineered_v2 | source=mt5[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=6, microseconds=915173), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1227, 'message': "DRL Training | symbols=['XAUUSDm'] | timesteps=50,000 | period=90d | tf=5m | candles=80,000 | per_symbol=True | initial_balance=10000.00 | features=engineered_v2 | source=mt5", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 45, 775686, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=6, microseconds=915173), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1227, 'message': "DRL Training | symbols=['XAUUSDm'] | timesteps=50,000 | period=90d | tf=5m | candles=80,000 | per_symbol=True | initial_balance=10000.00 | features=engineered_v2 | source=mt5", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 45, 775686, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:45.902[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_chronological_oos_split[0m:[36m545[0m - [1mFIX-OOS-01: Chronological OOS split applied | train_rows=60000 oos_rows=20000 ratio=0.25 | train_end=2026-02-24T08:20:00+00:00 oos_start=2026-02-24T08:25:00+00:00[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=41711), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_chronological_oos_split', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 545, 'message': 'FIX-OOS-01: Chronological OOS split applied | train_rows=60000 oos_rows=20000 ratio=0.25 | train_end=2026-02-24T08:20:00+00:00 oos_start=2026-02-24T08:25:00+00:00', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 45, 902224, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=41711), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_chronological_oos_split', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 545, 'message': 'FIX-OOS-01: Chronological OOS split applied | train_rows=60000 oos_rows=20000 ratio=0.25 | train_end=2026-02-24T08:20:00+00:00 oos_start=2026-02-24T08:25:00+00:00', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 45, 902224, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.161[0m | [1mINFO    [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m131[0m - [1mCross-asset: fetched 90194 bars for USDJPYm (5m)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=301067), 'exception': None, 'extra': {}, 'file': (name='cross_asset.py', path='C:\\supreme-chainsaw\\Python\\cross_asset.py'), 'function': '_fetch_cross_data', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 131, 'message': 'Cross-asset: fetched 90194 bars for USDJPYm (5m)', 'module': 'cross_asset', 'name': 'Python.cross_asset', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 161580, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=301067), 'exception': None, 'extra': {}, 'file': (name='cross_asset.py', path='C:\\supreme-chainsaw\\Python\\cross_asset.py'), 'function': '_fetch_cross_data', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 131, 'message': 'Cross-asset: fetched 90194 bars for USDJPYm (5m)', 'module': 'cross_asset', 'name': 'Python.cross_asset', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 161580, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.260[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=400004), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 260517, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=400004), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 260517, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.265[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=404992), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 265505, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=404992), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 265505, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.281[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10YR[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=420769), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10YR', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 281282, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=420769), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10YR', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 281282, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.285[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10YR@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=425185), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10YR@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 285698, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=425185), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10YR@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 285698, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.302[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y.BOND[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=441982), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y.BOND', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 302495, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=441982), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y.BOND', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 302495, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.307[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y.BOND@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=446657), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y.BOND@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 307170, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=446657), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y.BOND@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 307170, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.323[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y.cfd[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=462764), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y.cfd', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 323277, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=462764), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10Y.cfd', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 323277, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.328[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y.cfd@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=467942), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y.cfd@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 328455, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=467942), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10Y.cfd@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 328455, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.344[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10YT[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=483992), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10YT', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 344505, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=483992), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: US10YT', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 344505, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.348[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10YT@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=487998), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10YT@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 348511, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=487998), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for US10YT@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 348511, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.351[0m | [34m[1mDEBUG   [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m138[0m - [34m[1mCross-asset: US10Y not available after all fallbacks[0m
+[32m2026-06-07 14:59:46.362[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DXY[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=502166), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DXY', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 362679, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=502166), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DXY', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 362679, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.367[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DXY@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=506999), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DXY@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 367512, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=506999), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DXY@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 367512, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.389[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: USDX[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=528974), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: USDX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 389487, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=528974), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: USDX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 389487, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.394[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for USDX@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=533781), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for USDX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 394294, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=533781), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for USDX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 394294, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.410[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DOLLAR_INDEX[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=550305), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DOLLAR_INDEX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 410818, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=550305), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DOLLAR_INDEX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 410818, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.415[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DOLLAR_INDEX@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=554722), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DOLLAR_INDEX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 415235, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=554722), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DOLLAR_INDEX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 415235, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.432[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: USDOLLAR[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=571875), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: USDOLLAR', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 432388, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=571875), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: USDOLLAR', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 432388, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.436[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for USDOLLAR@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=576323), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for USDOLLAR@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 436836, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=576323), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for USDOLLAR@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 436836, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.452[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DXY.cfd[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=592046), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DXY.cfd', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 452559, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=592046), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DXY.cfd', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 452559, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.456[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DXY.cfd@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=596085), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DXY.cfd@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 456598, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=596085), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DXY.cfd@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 456598, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.474[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DX[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=613582), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 474095, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=613582), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': '_fetch_mt5_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 491, 'message': 'symbol not available in MT5 market watch: DX', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 474095, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.478[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DX@5m - returning empty (will degrade gracefully upstream)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=617938), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 478451, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=7, microseconds=617938), 'exception': None, 'extra': {}, 'file': (name='data_feed.py', path='C:\\supreme-chainsaw\\Python\\data_feed.py'), 'function': 'fetch_training_data', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 579, 'message': 'No data (live or cache) for DX@5m - returning empty (will degrade gracefully upstream)', 'module': 'data_feed', 'name': 'Python.data_feed', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 46, 478451, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:46.483[0m | [34m[1mDEBUG   [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m138[0m - [34m[1mCross-asset: DXY not available after all fallbacks[0m
+[32m2026-06-07 14:59:48.410[0m | [1mINFO    [0m | [36mPython.ml_signal[0m:[36mcompute_ml_signal[0m:[36m80[0m - [1mML Signal: XGBoost trained on 60000 x 58[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=9, microseconds=550147), 'exception': None, 'extra': {}, 'file': (name='ml_signal.py', path='C:\\supreme-chainsaw\\Python\\ml_signal.py'), 'function': 'compute_ml_signal', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 80, 'message': 'ML Signal: XGBoost trained on 60000 x 58', 'module': 'ml_signal', 'name': 'Python.ml_signal', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 48, 410660, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=9, microseconds=550147), 'exception': None, 'extra': {}, 'file': (name='ml_signal.py', path='C:\\supreme-chainsaw\\Python\\ml_signal.py'), 'function': 'compute_ml_signal', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 80, 'message': 'ML Signal: XGBoost trained on 60000 x 58', 'module': 'ml_signal', 'name': 'Python.ml_signal', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 48, 410660, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:49.770[0m | [1mINFO    [0m | [36mdrl.lstm_feature_extractor[0m:[36m__init__[0m:[36m31[0m - [1minitializing LSTMFeatureExtractor[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=909580), 'exception': None, 'extra': {}, 'file': (name='lstm_feature_extractor.py', path='C:\\supreme-chainsaw\\drl\\lstm_feature_extractor.py'), 'function': '__init__', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 31, 'message': 'initializing LSTMFeatureExtractor', 'module': 'lstm_feature_extractor', 'name': 'drl.lstm_feature_extractor', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 770093, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=909580), 'exception': None, 'extra': {}, 'file': (name='lstm_feature_extractor.py', path='C:\\supreme-chainsaw\\drl\\lstm_feature_extractor.py'), 'function': '__init__', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 31, 'message': 'initializing LSTMFeatureExtractor', 'module': 'lstm_feature_extractor', 'name': 'drl.lstm_feature_extractor', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 770093, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:49.828[0m | [32m[1mSUCCESS [0m | [36mPython.agi_brain[0m:[36m_load_bundle[0m:[36m228[0m - [32m[1mAGI Brain loaded default model on CPU[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=968077), 'exception': None, 'extra': {}, 'file': (name='agi_brain.py', path='C:\\supreme-chainsaw\\Python\\agi_brain.py'), 'function': '_load_bundle', 'level': (name='SUCCESS', no=25, icon='\u2705'), 'line': 228, 'message': 'AGI Brain loaded default model on CPU', 'module': 'agi_brain', 'name': 'Python.agi_brain', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 828590, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=968077), 'exception': None, 'extra': {}, 'file': (name='agi_brain.py', path='C:\\supreme-chainsaw\\Python\\agi_brain.py'), 'function': '_load_bundle', 'level': (name='SUCCESS', no=25, icon='\u2705'), 'line': 228, 'message': 'AGI Brain loaded default model on CPU', 'module': 'agi_brain', 'name': 'Python.agi_brain', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 828590, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:49.834[0m | [32m[1mSUCCESS [0m | [36mPython.agi_brain[0m:[36m_load_bundle[0m:[36m240[0m - [32m[1mloaded default feature scaler[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=974015), 'exception': None, 'extra': {}, 'file': (name='agi_brain.py', path='C:\\supreme-chainsaw\\Python\\agi_brain.py'), 'function': '_load_bundle', 'level': (name='SUCCESS', no=25, icon='\u2705'), 'line': 240, 'message': 'loaded default feature scaler', 'module': 'agi_brain', 'name': 'Python.agi_brain', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 834528, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=10, microseconds=974015), 'exception': None, 'extra': {}, 'file': (name='agi_brain.py', path='C:\\supreme-chainsaw\\Python\\agi_brain.py'), 'function': '_load_bundle', 'level': (name='SUCCESS', no=25, icon='\u2705'), 'line': 240, 'message': 'loaded default feature scaler', 'module': 'agi_brain', 'name': 'Python.agi_brain', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 49, 834528, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:53.191[0m | [1mINFO    [0m | [36mPython.ml_signal[0m:[36mcompute_ml_signal[0m:[36m80[0m - [1mML Signal: XGBoost trained on 20000 x 58[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=331128), 'exception': None, 'extra': {}, 'file': (name='ml_signal.py', path='C:\\supreme-chainsaw\\Python\\ml_signal.py'), 'function': 'compute_ml_signal', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 80, 'message': 'ML Signal: XGBoost trained on 20000 x 58', 'module': 'ml_signal', 'name': 'Python.ml_signal', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 191641, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=331128), 'exception': None, 'extra': {}, 'file': (name='ml_signal.py', path='C:\\supreme-chainsaw\\Python\\ml_signal.py'), 'function': 'compute_ml_signal', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 80, 'message': 'ML Signal: XGBoost trained on 20000 x 58', 'module': 'ml_signal', 'name': 'Python.ml_signal', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 191641, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:53.258[0m | [33m[1mWARNING [0m | [36mtraining.train_drl[0m:[36m_train_once[0m:[36m1380[0m - [33m[1mLSTM pretrain skipped (non-fatal): No module named 'training.pretrain_lstm'[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=398219), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 1380, 'message': "LSTM pretrain skipped (non-fatal): No module named 'training.pretrain_lstm'", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 258732, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\supreme-chainsaw\training\train_drl.py", line 1365, in _train_once
+    from training.pretrain_lstm import pretrain_feature_extractor
+ModuleNotFoundError: No module named 'training.pretrain_lstm'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=398219), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='WARNING', no=30, icon='\u26a0\ufe0f'), 'line': 1380, 'message': "LSTM pretrain skipped (non-fatal): No module named 'training.pretrain_lstm'", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 258732, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\supreme-chainsaw\training\train_drl.py", line 1365, in _train_once
+    from training.pretrain_lstm import pretrain_feature_extractor
+ModuleNotFoundError: No module named 'training.pretrain_lstm'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:53.267[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_train_once[0m:[36m1395[0m - [1mAnti-dead-Gaussian: target_kl annealing enabled (start=0.30 end=0.05 anneal_frac=0.5)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=406758), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1395, 'message': 'Anti-dead-Gaussian: target_kl annealing enabled (start=0.30 end=0.05 anneal_frac=0.5)', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 267271, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=406758), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1395, 'message': 'Anti-dead-Gaussian: target_kl annealing enabled (start=0.30 end=0.05 anneal_frac=0.5)', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 267271, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:53.271[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_train_once[0m:[36m1406[0m - [1mStarting PPO training[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=410787), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1406, 'message': 'Starting PPO training', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 271300, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=410787), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_train_once', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1406, 'message': 'Starting PPO training', 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 271300, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+================================================================================
+DECISION PPO TRAINING LAUNCH
+================================================================================
+Symbol: XAUUSDm
+Timesteps: 50,000
+Period: 90d | Interval: 5m
+Action config: {'decision_ppo': True, 'decision_action_dim': 18}
+Time: 2026-06-07T14:59:45.751951
+================================================================================
+Using best feature params for XAUUSDm
+
+Starting _train_once for XAUUSDm with decision_ppo enabled...
+Logging to: logs\decision_ppo_XAUUSDm_20260607_145945.log
+[TradingEnv] Regime detector enabled
+[TradingEnv] Regime detector enabled
+[TradingEnv] Regime detector enabled
+[TradingEnv] Regime detector enabled
+Using cpu device
+[TradingEnv] Regime detector enabled
+Logging to C:\supreme-chainsaw\logs\drl_joint\PPO_120
+[32m2026-06-07 14:59:53.282[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_training_start[0m:[36m1061[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=0/50,000 | pct=0.00 | elapsed_s=0 | eta_s=unknown[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=421832), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_training_start', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1061, 'message': "PPO progress | symbols=['XAUUSDm'] | step=0/50,000 | pct=0.00 | elapsed_s=0 | eta_s=unknown", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 282345, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=421832), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_training_start', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1061, 'message': "PPO progress | symbols=['XAUUSDm'] | step=0/50,000 | pct=0.00 | elapsed_s=0 | eta_s=unknown", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 282345, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 14:59:53.339[0m | [1mINFO    [0m | [36mPython.autonomous.regime_controller[0m:[36m__init__[0m:[36m314[0m - [1mRegimeAdaptiveController initialized (Rainforest=%s, Patterns=%s, TradeDecision=%s)[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=478855), 'exception': None, 'extra': {}, 'file': (name='regime_controller.py', path='C:\\supreme-chainsaw\\Python\\autonomous\\regime_controller.py'), 'function': '__init__', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 314, 'message': 'RegimeAdaptiveController initialized (Rainforest=%s, Patterns=%s, TradeDecision=%s)', 'module': 'regime_controller', 'name': 'Python.autonomous.regime_controller', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 339368, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=14, microseconds=478855), 'exception': None, 'extra': {}, 'file': (name='regime_controller.py', path='C:\\supreme-chainsaw\\Python\\autonomous\\regime_controller.py'), 'function': '__init__', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 314, 'message': 'RegimeAdaptiveController initialized (Rainforest=%s, Patterns=%s, TradeDecision=%s)', 'module': 'regime_controller', 'name': 'Python.autonomous.regime_controller', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 14, 59, 53, 339368, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 15:00:37.035[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=5,000/50,000 | pct=10.00 | elapsed_s=43 | eta_s=393 | equity=9813.55 | sharpe=-0.013 | wr=46.86% | pf=-0.70 | dd=1.99% | trades=23 | avgW=19.1334 | avgL=-25.0521[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=58, microseconds=175296), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=5,000/50,000 | pct=10.00 | elapsed_s=43 | eta_s=393 | equity=9813.55 | sharpe=-0.013 | wr=46.86% | pf=-0.70 | dd=1.99% | trades=23 | avgW=19.1334 | avgL=-25.0521", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 0, 37, 35809, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=58, microseconds=175296), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=5,000/50,000 | pct=10.00 | elapsed_s=43 | eta_s=393 | equity=9813.55 | sharpe=-0.013 | wr=46.86% | pf=-0.70 | dd=1.99% | trades=23 | avgW=19.1334 | avgL=-25.0521", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 0, 37, 35809, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 15:01:22.805[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=10,000/50,000 | pct=20.00 | elapsed_s=89 | eta_s=358 | equity=9831.88 | sharpe=0.072 | wr=42.40% | pf=-0.76 | dd=1.81% | trades=39 | avgW=18.8494 | avgL=-18.4860[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=103, microseconds=945057), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=10,000/50,000 | pct=20.00 | elapsed_s=89 | eta_s=358 | equity=9831.88 | sharpe=0.072 | wr=42.40% | pf=-0.76 | dd=1.81% | trades=39 | avgW=18.8494 | avgL=-18.4860", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 1, 22, 805570, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=103, microseconds=945057), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=10,000/50,000 | pct=20.00 | elapsed_s=89 | eta_s=358 | equity=9831.88 | sharpe=0.072 | wr=42.40% | pf=-0.76 | dd=1.81% | trades=39 | avgW=18.8494 | avgL=-18.4860", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 1, 22, 805570, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 15:01:59.364[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=15,000/50,000 | pct=30.00 | elapsed_s=126 | eta_s=294 | equity=9741.22 | sharpe=0.039 | wr=42.11% | pf=-0.82 | dd=2.72% | trades=56 | avgW=18.7865 | avgL=-16.8653[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=140, microseconds=504455), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=15,000/50,000 | pct=30.00 | elapsed_s=126 | eta_s=294 | equity=9741.22 | sharpe=0.039 | wr=42.11% | pf=-0.82 | dd=2.72% | trades=56 | avgW=18.7865 | avgL=-16.8653", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 1, 59, 364968, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=140, microseconds=504455), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=15,000/50,000 | pct=30.00 | elapsed_s=126 | eta_s=294 | equity=9741.22 | sharpe=0.039 | wr=42.11% | pf=-0.82 | dd=2.72% | trades=56 | avgW=18.7865 | avgL=-16.8653", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 1, 59, 364968, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[TargetKLAnneal] start: target_kl=0.300 (will anneal to 0.050 over 50% of 50,000 steps)
+----------------------------------------------------
+| reward/                              |           |
+|    account_doubling_bonus            | 0         |
+|    bonus_contrib                     | 0.0421    |
+|    churn_penalty                     | 0.0059    |
+|    cost_penalty                      | 3.83e-06  |
+|    dd_base                           | 0         |
+|    delta                             | 0.0059    |
+|    drawdown                          | 0.0189    |
+|    hold_time_penalty                 | 4.26      |
+|    penalty_contrib                   | 4.26      |
+|    position                          | 0.098     |
+|    position_scaling_bonus            | 0         |
+|    reward                            | -0.847    |
+|    shaped_reward                     | -4.22     |
+|    tr_asymmetric_loss_term           | 0         |
+|    tr_calmar_penalty                 | 0         |
+|    tr_cost_penalty                   | 7.67e-06  |
+|    tr_drawdown_penalty               | 0         |
+|    tr_dsr_bonus                      | 0         |
+|    tr_excessive_hold_penalty         | 0.000228  |
+|    tr_hold_persist_penalty           | 0.00304   |
+|    tr_ir_bonus                       | 0         |
+|    tr_overtrading_penalty            | 0.00369   |
+|    tr_pnl_after_spread_commission... | -7.41e-06 |
+|    tr_raw_cost_penalty               | 7.67e-06  |
+|    tr_risk_violation_penalty         | 0         |
+|    tr_sortino_term                   | 0         |
+|    tr_spread_penalty                 | 7.37e-06  |
+|    tr_trade_exploration_bonus        | 5.5e-05   |
+|    tr_vol_adjusted_cost              | 0         |
+|    tr_zscore_scaled                  | 0         |
+|    trading_reward                    | -0.00382  |
+| time/                                |           |
+|    fps                               | 122       |
+|    iterations                        | 1         |
+|    time_elapsed                      | 133       |
+|    total_timesteps                   | 16384     |
+----------------------------------------------------
+[32m2026-06-07 15:04:07.318[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=20,000/50,000 | pct=40.00 | elapsed_s=254 | eta_s=381 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9710.39 | sharpe=-0.052 | wr=40.50% | pf=-0.81 | dd=3.02% | trades=77 | avgW=18.4100 | avgL=-15.7763[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=268, microseconds=457701), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=20,000/50,000 | pct=40.00 | elapsed_s=254 | eta_s=381 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9710.39 | sharpe=-0.052 | wr=40.50% | pf=-0.81 | dd=3.02% | trades=77 | avgW=18.4100 | avgL=-15.7763", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 4, 7, 318214, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=268, microseconds=457701), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=20,000/50,000 | pct=40.00 | elapsed_s=254 | eta_s=381 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9710.39 | sharpe=-0.052 | wr=40.50% | pf=-0.81 | dd=3.02% | trades=77 | avgW=18.4100 | avgL=-15.7763", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 4, 7, 318214, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 15:04:34.319[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=25,000/50,000 | pct=50.00 | elapsed_s=281 | eta_s=281 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9708.81 | sharpe=-0.150 | wr=42.14% | pf=-0.91 | dd=3.04% | trades=94 | avgW=18.4919 | avgL=-15.0495[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=295, microseconds=459251), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=25,000/50,000 | pct=50.00 | elapsed_s=281 | eta_s=281 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9708.81 | sharpe=-0.150 | wr=42.14% | pf=-0.91 | dd=3.04% | trades=94 | avgW=18.4919 | avgL=-15.0495", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 4, 34, 319764, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=295, microseconds=459251), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=25,000/50,000 | pct=50.00 | elapsed_s=281 | eta_s=281 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9708.81 | sharpe=-0.150 | wr=42.14% | pf=-0.91 | dd=3.04% | trades=94 | avgW=18.4919 | avgL=-15.0495", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 4, 34, 319764, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[32m2026-06-07 15:05:00.097[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=30,000/50,000 | pct=60.00 | elapsed_s=306 | eta_s=204 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9626.94 | sharpe=0.082 | wr=40.78% | pf=-0.84 | dd=3.86% | trades=107 | avgW=18.4879 | avgL=-15.3593[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=321, microseconds=237211), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=30,000/50,000 | pct=60.00 | elapsed_s=306 | eta_s=204 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9626.94 | sharpe=0.082 | wr=40.78% | pf=-0.84 | dd=3.86% | trades=107 | avgW=18.4879 | avgL=-15.3593", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 5, 0, 97724, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=321, microseconds=237211), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=30,000/50,000 | pct=60.00 | elapsed_s=306 | eta_s=204 | approx_kl=0.0667 | exp_var=-0.004 | loss=-0.176 | equity=9626.94 | sharpe=0.082 | wr=40.78% | pf=-0.84 | dd=3.86% | trades=107 | avgW=18.4879 | avgL=-15.3593", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 5, 0, 97724, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---
+[RegimeRoutedPPO] supervised loss: too many indices for array: array is 1-dimensional, but 2 were indexed
+----------------------------------------------------
+| reward/                              |           |
+|    account_doubling_bonus            | 0         |
+|    bonus_contrib                     | 0.0375    |
+|    churn_penalty                     | 0.00387   |
+|    cost_penalty                      | 2.52e-06  |
+|    dd_base                           | 0         |
+|    delta                             | 0.00387   |
+|    drawdown                          | 0.033     |
+|    hold_time_penalty                 | 11        |
+|    penalty_contrib                   | 11        |
+|    position                          | 0.146     |
+|    position_scaling_bonus            | 0         |
+|    reward                            | -2.19     |
+|    shaped_reward                     | -11       |
+|    tr_asymmetric_loss_term           | 0         |
+|    tr_calmar_penalty                 | 0         |
+|    tr_cost_penalty                   | 5.03e-06  |
+|    tr_drawdown_penalty               | 0         |
+|    tr_dsr_bonus                      | 0         |
+|    tr_excessive_hold_penalty         | 0.00225   |
+|    tr_hold_persist_penalty           | 0.00289   |
+|    tr_ir_bonus                       | 0         |
+|    tr_overtrading_penalty            | 0.00242   |
+|    tr_pnl_after_spread_commission... | -6.79e-06 |
+|    tr_raw_cost_penalty               | 5.03e-06  |
+|    tr_risk_violation_penalty         | 0         |
+|    tr_sortino_term                   | 0         |
+|    tr_spread_penalty                 | 4.84e-06  |
+|    tr_trade_exploration_bonus        | 3.6e-05   |
+|    tr_vol_adjusted_cost              | 0         |
+|    tr_zscore_scaled                  | 0         |
+|    trading_reward                    | -0.00338  |
+| time/                                |           |
+|    fps                               | 101       |
+|    iterations                        | 2         |
+|    time_elapsed                      | 322       |
+|    total_timesteps                   | 32768     |
+| train/                               |           |
+|    approx_kl                         | 0.0667424 |
+|    clip_fraction                     | 0.805     |
+|    clip_range                        | 0.05      |
+|    clip_range_vf                     | 0.05      |
+|    entropy_loss                      | -2.51     |
+|    explained_variance                | -0.00394  |
+|    learning_rate                     | 3.36e-06  |
+|    loss                              | -0.176    |
+|    n_updates                         | 3         |
+|    policy_gradient_loss              | 0.0451    |
+|    std                               | 0.368     |
+|    value_loss                        | 0.396     |
+----------------------------------------------------
+[32m2026-06-07 15:07:06.722[0m | [1mINFO    [0m | [36mtraining.train_drl[0m:[36m_on_step[0m:[36m1194[0m - [1mPPO progress | symbols=['XAUUSDm'] | step=35,000/50,000 | pct=70.00 | elapsed_s=433 | eta_s=185 | approx_kl=0.0405 | exp_var=0.013 | loss=-0.176 | equity=9648.66 | sharpe=0.058 | wr=42.59% | pf=-0.92 | dd=3.64% | trades=120 | avgW=18.5019 | avgL=-15.0677[0m
+--- Logging error in Loguru Handler #1 ---
+Record was: {'elapsed': datetime.timedelta(seconds=447, microseconds=862320), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=35,000/50,000 | pct=70.00 | elapsed_s=433 | eta_s=185 | approx_kl=0.0405 | exp_var=0.013 | loss=-0.176 | equity=9648.66 | sharpe=0.058 | wr=42.59% | pf=-0.92 | dd=3.64% | trades=120 | avgW=18.5019 | avgL=-15.0677", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 7, 6, 722833, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\dreamer_training.log' -> 'C:\\supreme-chainsaw\\logs\\dreamer_training.2026-06-04_17-44-03_052057.log'
+--- End of logging error ---
+--- Logging error in Loguru Handler #2 ---
+Record was: {'elapsed': datetime.timedelta(seconds=447, microseconds=862320), 'exception': None, 'extra': {}, 'file': (name='train_drl.py', path='C:\\supreme-chainsaw\\training\\train_drl.py'), 'function': '_on_step', 'level': (name='INFO', no=20, icon='\u2139\ufe0f'), 'line': 1194, 'message': "PPO progress | symbols=['XAUUSDm'] | step=35,000/50,000 | pct=70.00 | elapsed_s=433 | eta_s=185 | approx_kl=0.0405 | exp_var=0.013 | loss=-0.176 | equity=9648.66 | sharpe=0.058 | wr=42.59% | pf=-0.92 | dd=3.64% | trades=120 | avgW=18.5019 | avgL=-15.0677", 'module': 'train_drl', 'name': 'training.train_drl', 'process': (id=11252, name='MainProcess'), 'thread': (id=9400, name='MainThread'), 'time': datetime(2026, 6, 7, 15, 7, 6, 722833, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200), 'W. Europe Daylight Time'))}
+Traceback (most recent call last):
+  File "C:\Python314\Lib\site-packages\loguru\_handler.py", line 206, in emit
+    self._sink.write(str_record)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 204, in write
+    self._terminate_file(is_rotating=True)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\site-packages\loguru\_file_sink.py", line 276, in _terminate_file
+    os.rename(old_path, renamed_path)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\supreme-chainsaw\\logs\\ppo_training.log' -> 'C:\\supreme-chainsaw\\logs\\ppo_training.2026-06-05_13-15-26_873145.log'
+--- End of logging error ---

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-06-07T15:09:52.789693+00:00",
+  "launcher": "launch_decision_ppo_training",
+  "symbol": "XAUUSDm",
+  "timesteps": 50000,
+  "action_config": {
+    "decision_ppo": true,
+    "decision_action_dim": 18
+  },
+  "note": "First good rich Decision PPO candidate from this run should trigger watcher -> promoter -> ExecutionAgent paper harness autonomously.",
+  "next": "handoff_watcher.py will detect via candidates/ mtime + _detect_execution_type and invoke with AGI_EXECUTION_TYPE=decision_ppo"
+}
