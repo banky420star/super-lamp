@@ -39,6 +39,13 @@ python -m Python.Server_AGI
 # 5. Start the dashboard (separate terminal)
 python tools/project_status_ui.py
 # Open: http://127.0.0.1:8088 (or the port your UI uses)
+
+# Recommended one-command full production monitoring stack (React UI + api data layer + supervisor + TUI):
+#   .\launch_full_project.ps1                 # Full observable stack (dev UI + proxy to 5050) -- NEW MTF STANDARD DEFAULT (1m+5m+15m+1h + best feats per symbol; TUI parity + React)
+#   .\launch_full_project.ps1 -Preview        # Production preview build mode
+#   .\launch_full_project.ps1 -DryRun         # Validate plan + detections only
+#   (Legacy single-TF: AGI_USE_LEGACY_SINGLE_TF=1 ; see PRODUCTION.md 5.6)
+# See script header for all flags, prerequisites, and Windows VPS notes.
 ```
 
 Run the test suite to verify the installation:
@@ -243,6 +250,47 @@ Check for feature drift between backtest and live:
 ```powershell
 python tools/backtest_vs_live_drift.py
 ```
+
+
+## Evaluation & Plotting
+
+Standalone analysis scripts in `training/` evaluate model behavior and regime
+classifier performance on both synthetic and real XAUUSD data:
+
+| Script | Purpose |
+|--------|---------|
+| `training/eval_harness.py` | Shared module: env factory, regime observation builder, position/reward collectors, regime bar-chart plotter |
+| `training/plot_regime_actions.py` | Per-regime action distribution (5-panel bar chart) — synthetic data |
+| `training/plot_position_timeseries.py` | ALL vs no_regime position time series + CSV metrics — XAUUSD |
+| `training/plot_regime_time_series.py` | Regime detector colour bands overlaid on price chart — XAUUSD |
+| `training/run_feature_ablation.py` | Feature group ablation harness — compares ALL, no_volume, no_momentum, no_volatility, no_trend, no_regime |
+
+### Quick start
+
+```bash
+# Per-regime action distribution (synthetic)
+python training/plot_regime_actions.py
+
+# Position time series + metrics CSV (XAUUSD)
+python training/plot_position_timeseries.py
+
+# Regime bands on price (XAUUSD)
+python training/plot_regime_time_series.py
+
+# Feature ablation comparison (synthetic)
+python training/run_feature_ablation.py --steps 20000 --verbose
+```
+
+Outputs land in `logs/`: PNG figures and `position_metrics.csv` / `feature_ablation_results.csv`.
+
+The shared module `training/eval_harness.py` provides:
+
+- `fit_regime_detector(df)` — fit RegimeDetector on OHLCV data
+- `build_regime_observations(features, df, detector)` — append regime one-hot + confidence
+- `make_eval_env(obs, df)` — DummyVecEnv with action-contingent reward
+- `collect_positions(model, obs, df)` — deterministic eval returning positions
+- `collect_metrics(model, obs, df)` — eval returning (positions, rewards)
+- `plot_regime_action_distribution(positions, regime_indices)` — 5-panel regime bar chart
 
 ---
 
