@@ -8,6 +8,8 @@ The Chain Gambler API server runs on port 5000 (embedded in the AGI engine) and 
 
 **CORS:** Allowed origins are `http://localhost:4180` and `http://127.0.0.1:4180`. Additional origins can be added via `AGI_ALLOWED_ORIGINS` environment variable in production.
 
+> **Port reference:** Port **4180** is the `ui_lab_app/` served from the desktop `SupremeChainsaw_Clean/` tree (the canonical runtime). Port **5173** is the `frontend/` dev server launched by `launch_full_project.ps1` in the `C:\supreme-chainsaw\` source tree. API is **5050** in both. The examples below use `http://localhost:5050` to be portable across both trees.
+
 ---
 
 ## Table of Contents
@@ -1102,3 +1104,116 @@ For full status polling, use `GET /api/status` at a 2-5 second interval instead.
 Serves the Telegram Mini App HTML page for mobile monitoring.
 
 Returns `text/html`. No parameters. Used by the Telegram bot's inline web app button.
+
+---
+
+## Eval Harness (training/eval_harness.py)
+
+Shared module for model evaluation, regime-aware observation construction,
+and plotting.  All scripts in `training/` import from this module.
+
+### Public API
+
+#### `fit_regime_detector(df: pd.DataFrame, verbose: bool = True) -> RegimeDetector`
+
+Fit a Random Forest market regime classifier on historical OHLCV data.
+
+- **df**: OHLCV DataFrame with columns ``open``, ``high``, ``low``, ``close``.
+- **verbose**: Print status line when ``True``.
+- **Returns**: Fitted ``RegimeDetector`` (calls ``fit_heuristic`` internally).
+
+---
+
+#### `build_regime_observations(features, df, detector, window_size=100, regime_dim=REGIME_DIM) -> np.ndarray`
+
+Append regime one-hot + confidence to each feature window.
+
+- **features**: ``(n_windows, n_feature_dims)`` array from ``make_synthetic_features``.
+- **df**: OHLCV DataFrame (length == raw bar count).
+- **detector**: Fitted ``RegimeDetector``.
+- **window_size**: Bars per observation (default 100).
+- **regime_dim**: Regime feature width 6 = onehot(5) + confidence(1).
+- **Returns**: ``(n_windows, n_feature_dims + 6)`` observation array.
+
+---
+
+#### `make_eval_env(obs, df=None, window_size=100) -> DummyVecEnv`
+
+Create a ``DummyVecEnv`` for evaluation with action-contingent reward.
+
+- **obs**: Observation array ``(n_windows, obs_dim)``.
+- **df**: Optional OHLCV DataFrame for real price rewards. When ``None`` uses
+  a synthetic reward ``mean(feature[:5]) * 0.01``.
+- **window_size**: Bars per observation (default 100).
+- **Returns**: ``DummyVecEnv`` wrapping a single ``gym.Env``.
+
+Reward formula (when *df* is provided)::
+
+    reward = sign(position) * bar_return - 0.0001 * |position_change|
+
+---
+
+#### `collect_positions(model, obs, df, window_size) -> np.ndarray`
+
+Run deterministic evaluation and return the position time series.
+
+- **model**: Trained SB3 model (PPO or RegimeRoutedPPO).
+- **obs**: Evaluation observation array.
+- **df**: OHLCV DataFrame for reward computation.
+- **window_size**: Observation window size.
+- **Returns**: ``(n_steps,)`` array with values in {-1, 0, +1}.
+
+---
+
+#### `collect_metrics(model, obs, df, window_size) -> tuple[np.ndarray, np.ndarray]`
+
+Run deterministic evaluation and return both positions and rewards.
+
+- **model**: Trained SB3 model.
+- **obs**: Evaluation observation array.
+- **df**: OHLCV DataFrame for reward computation.
+- **window_size**: Observation window size.
+- **Returns**: ``(positions, rewards)`` tuple, each ``(n_steps,)``.
+
+---
+
+#### `plot_regime_action_distribution(positions, regime_indices, regime_labels=None, num_regimes=5, title="Per-Regime Action Distribution", save_path="logs/regime_action_distribution.png", dpi=150, verbose=True) -> plt.Figure`
+
+Plot a 5-panel bar chart showing Short/Flat/Long distribution per regime.
+
+- **positions**: ``(n_steps,)`` array in {-1, 0, +1}.
+- **regime_indices**: ``(n_steps,)`` array of regime index (0--4).
+- **regime_labels**: 5 label strings; defaults to ``REGIME_LABELS``.
+- **num_regimes**: Number of regime classes (default 5).
+- **title**: Figure super-title.
+- **save_path**: PNG save path (``None`` disables saving).
+- **dpi**: Figure DPI (default 150).
+- **verbose**: Print summary table to stdout when ``True``.
+- **Returns**: matplotlib ``Figure`` (saved to *save_path* if set).
+
+---
+
+#### `REGIME_DIM` (constant)
+
+``REGIME_DIM = NUM_REGIMES + 1 = 6`` — one-hot vector for 5 regime classes
+plus a confidence scalar appended to observations.
+
+---
+
+### Quick start
+
+```bash
+# Per-regime action distribution (synthetic data)
+python training/plot_regime_actions.py
+
+# Position time series + metrics CSV (XAUUSD)
+python training/plot_position_timeseries.py
+
+# Regime bands on price chart (XAUUSD)
+python training/plot_regime_time_series.py
+
+# Feature ablation comparison (synthetic data)
+python training/run_feature_ablation.py --steps 20000 --verbose
+```
+
+Outputs (PNGs + CSVs) land in ``logs/``.
