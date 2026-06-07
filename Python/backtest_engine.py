@@ -498,6 +498,7 @@ class BacktestEngine:
                 highs[i] - lows[i],
                 abs(highs[i] - closes[i-1]),
                 abs(lows[i] - closes[i-1])
+            )
             tr_list.append(tr)
 
         return np.mean(tr_list) if tr_list else closes[-1] * 0.001
