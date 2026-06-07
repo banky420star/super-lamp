@@ -44,6 +44,7 @@ import torch as th
 from gymnasium import spaces
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+from drl.adaptive_feature_extractor import AdaptiveLSTMFeatureExtractor
 from drl.regime_routed_policy import RegimeRoutedPPO, RegimeRoutedActorCriticPolicy
 
 # Disable SB3 warnings
@@ -407,9 +408,16 @@ def run_trial(
         regime_dim=regime_dim,
     )
 
-    # Build policy kwargs — use default FlattenExtractor (no LSTM) for ablation simplicity
+    # Build policy kwargs — use AdaptiveLSTMFeatureExtractor to match real training pipeline
     use_regime = regime_dim > 0
     policy_kwargs = {
+        "features_extractor_class": AdaptiveLSTMFeatureExtractor,
+        "features_extractor_kwargs": {
+            "features_dim": 256,
+            "window_size": window_size,
+            "num_heads": 4,
+            "regime_dim": regime_dim,
+        },
         "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         "num_regimes": 5 if use_regime else 1,
         "regime_dim": regime_dim,
