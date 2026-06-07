@@ -5,7 +5,7 @@ import pytest
 import tempfile
 import os
 
-from Python.rainforest_detector import RainforestDetector
+from Python.rainforest_detector import RainforestDetector, FEATURE_NAMES
 
 # Valid regime set as defined in the production module
 REGIMES = {'bull_trend', 'bear_trend', 'ranging', 'breakout_up', 'breakout_down', 'reversal_up', 'reversal_down'}
@@ -81,8 +81,8 @@ class TestFeatureExtraction:
 
     def test_exact_feature_count(self, detector, synthetic_df):
         X = detector.extract_features(synthetic_df)
-        # FEATURE_NAMES has exactly 14 entries
-        assert X.shape[1] == 14
+        # FEATURE_NAMES has 30 entries (14 core + 5 timing + 11 patterns)
+        assert X.shape[1] == len(FEATURE_NAMES)
 
     def test_row_count_matches_input(self, detector, synthetic_df):
         X = detector.extract_features(synthetic_df)
@@ -183,7 +183,7 @@ class TestTraining:
 
     def test_fit_populates_feature_importances(self, detector, synthetic_df):
         detector.fit(synthetic_df)
-        assert len(detector._feature_importances) == 14
+        assert len(detector._feature_importances) == len(FEATURE_NAMES)
 
     def test_fit_feature_importance_values_sum_to_one(self, detector, synthetic_df):
         detector.fit(synthetic_df)
@@ -401,8 +401,8 @@ class TestTopPatterns:
     def test_n_larger_than_features_returns_all(self, detector, synthetic_df):
         detector.fit(synthetic_df)
         patterns = detector.get_top_patterns(n=100)
-        # Can't exceed the number of features (14)
-        assert len(patterns) <= 14
+        # Can't exceed the number of features
+        assert len(patterns) <= len(FEATURE_NAMES)
 
     def test_importance_values_are_floats(self, detector, synthetic_df):
         detector.fit(synthetic_df)
