@@ -609,11 +609,6 @@ def _policy_kwargs_for(feature_version: str) -> dict:
     _require_training_stack()
     from drl.adaptive_feature_extractor import AdaptiveLSTMFeatureExtractor
     from drl.lstm_feature_extractor import LSTMFeatureExtractor
-    try:
-        from drl.regime_detector import NUM_REGIMES
-    except Exception:
-        NUM_REGIMES = 5
-
     # v6 DEAD-GAUSSIAN FIX: log_std_init=-1.0 (std=0.37) instead of SB3's default 0.0
     # (std=1.0). With 18-dim Decision PPO action space, starting at std=1.0 means
     # uniform random action across the entire box, washing out the policy gradient
