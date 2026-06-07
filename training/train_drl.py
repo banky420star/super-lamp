@@ -77,16 +77,38 @@ os.makedirs(LOG_DIR, exist_ok=True)
 # (caller saw 14:45:09 v4 attempt1 crash on loguru _terminate_file rename after ~14min of training).
 # enqueue=True serializes writes through a single background thread (avoids concurrent rotation races).
 # catch=True swallows OSError from the sink so a rotation failure does not propagate to user code.
-logger.add(
-    os.path.join(LOG_DIR, "ppo_training.log"),
-    rotation=None,
-    retention=3,
-    enqueue=True,
-    catch=True,
-    backtrace=False,
-    diagnose=False,
-    level="INFO",
-)
+# Pre-unlink stale log to avoid PermissionError on _terminate_file rename (WinError 32).
+_ppo_log = os.path.join(LOG_DIR, "ppo_training.log")
+try:
+    if os.path.exists(_ppo_log):
+        os.unlink(_ppo_log)
+except OSError:
+    pass
+try:
+    logger.add(
+        _ppo_log,
+        rotation=None,
+        retention=0,
+        enqueue=True,
+        catch=True,
+        backtrace=False,
+        diagnose=False,
+        level="INFO",
+    )
+except OSError:
+    # Fallback: use PID-suffixed log if primary path is locked
+    _fallback = _ppo_log.replace(".log", f"_{os.getpid()}.log")
+    logger.add(
+        _fallback,
+        rotation=None,
+        retention=0,
+        enqueue=True,
+        catch=True,
+        backtrace=False,
+        diagnose=False,
+        level="INFO",
+    )
+    logger.warning(f"PPO log locked, using fallback: {_fallback}")
 LOCK_DIR = os.path.join(os.getcwd(), ".tmp")
 LOCK_PATH = os.path.join(LOCK_DIR, "train_drl.lock")
 
