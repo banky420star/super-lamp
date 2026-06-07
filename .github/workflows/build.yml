@@ -29,7 +29,7 @@ jobs:
           pip install pytest
 
       - name: Static compile check
-        run: python -m compileall Python drl training tools
+        run: python -m compileall Python drl training tools scripts
 
       - name: Run tests
         run: pytest -q
@@ -67,6 +67,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
+
+      - name: Static compile check
+        run: python -m compileall Python drl training tools scripts
 
       - name: Verify Pair Pipeline
         run: |

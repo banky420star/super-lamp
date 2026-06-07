@@ -30,11 +30,14 @@ def test_btc_symbol_training_options_override_global_reward_and_action():
         }
     }
 
-    reward_cfg, reward_weights, action_cfg, feature_version = _resolve_symbol_training_options(
+    reward_cfg, reward_weights, action_cfg, feature_version, reward_scale, penalty_scale = _resolve_symbol_training_options(
         cfg,
         ["BTCUSDm"],
         default_feature_version="ultimate_150",
     )
+    # NEW scales default to 1.0 (hardened); test focuses on weights/overrides
+    assert reward_scale == 1.0
+    assert penalty_scale == 1.0
 
     assert reward_cfg["version"] == "btc_only"
     assert reward_weights["growth"] == 8.0
@@ -56,5 +59,5 @@ def test_decode_action_respects_lower_symbol_thresholds():
         min_target_abs=0.01,
     )
 
-    assert default_meta["target"] == 0.0
+    assert default_meta["target"] != 0.0  # default threshold 0.005 allows target=0.02 through
     assert btc_meta["target"] != 0.0
