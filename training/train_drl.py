@@ -738,6 +738,11 @@ class RobustPPO(PPO):
                     param_group["lr"] = base_lr
 
 
+try:
+    from drl.regime_detector import NUM_REGIMES
+except Exception:
+    NUM_REGIMES = 5
+
 def _build_model(env, feature_version: str, ppo_params: dict):
     _require_training_stack()
 
