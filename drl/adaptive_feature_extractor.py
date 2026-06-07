@@ -2,6 +2,8 @@ import torch
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+from drl.trend_momentum_bias import TrendMomentumBiasLayer
+
 
 class FeatureGroupGate(torch.nn.Module):
     """
@@ -134,7 +136,7 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
     after the LSTM as before.
     """
 
-    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0, use_feature_gate=False):
+    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0, use_feature_gate=False, use_trend_momentum_bias=False):
         total_obs = int(observation_space.shape[0])
         self.seq_window = int(window_size)
         self.regime_dim = int(regime_dim)
@@ -145,7 +147,19 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
                 f"Invalid observation shape: total={total_obs}, window={self.seq_window}, port={self.portfolio_dim}"
             )
         actual_portfolio_dim = max(0, self.portfolio_dim - self.regime_dim)
-        super().__init__(observation_space, features_dim=features_dim + actual_portfolio_dim)
+
+        # Trend + Momentum bias layer: soft directional prior
+        # Create temporary instance first to get num_bias_features for _features_dim
+        _tmp_bias = None
+        bias_extra = 0
+        if use_trend_momentum_bias:
+            _tmp_bias = TrendMomentumBiasLayer(input_dim=features_dim)
+            bias_extra = _tmp_bias.num_bias_features
+
+        super().__init__(observation_space, features_dim=features_dim + bias_extra + actual_portfolio_dim)
+
+        # Now assign the bias layer to self (Module.__init__ has been called)
+        self.trend_momentum_bias = _tmp_bias
         self.seq_feature_dim = seq_flat // self.seq_window
         lstm_input_dim = self.seq_feature_dim + self.regime_dim
         self.encoder = torch.nn.LSTM(
@@ -199,6 +213,8 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
                 lstm_out = self.feature_gate(lstm_out, regime_onehot)
 
         projected = self.projection(lstm_out)
+        if self.trend_momentum_bias is not None:
+            projected = self.trend_momentum_bias(projected)
         if portfolio_state.shape[-1] > 0:
             return torch.cat([projected, portfolio_state], dim=1)
         return projected

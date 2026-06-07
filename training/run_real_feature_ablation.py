@@ -109,12 +109,14 @@ ABLATION_GROUPS = [
     "ALL",
     "NO_TREND",
     "NO_MOMENTUM",
+    "NO_TREND_MOMENTUM",
     "NO_VOLATILITY",
     "NO_VOLUME",
     "NO_CROSS_ASSET",
     "NO_ML_SIGNAL",
-    "NO_REGIME",
     "NO_PATTERN",
+    "NO_REGIME",
+    "TREND_MOMENTUM_FIRST",
 ]
 
 # Feature set cardinality (for 59-col matrix or 40-col base)
@@ -410,6 +412,7 @@ def run_trial(
 
     # Build policy kwargs — use AdaptiveLSTMFeatureExtractor to match real training pipeline
     use_regime = regime_dim > 0
+    use_bias = ablation_group == "TREND_MOMENTUM_FIRST"
     policy_kwargs = {
         "features_extractor_class": AdaptiveLSTMFeatureExtractor,
         "features_extractor_kwargs": {
@@ -417,6 +420,7 @@ def run_trial(
             "window_size": window_size,
             "num_heads": 4,
             "regime_dim": regime_dim,
+            "use_trend_momentum_bias": use_bias,
         },
         "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         "num_regimes": 5 if use_regime else 1,
@@ -698,8 +702,18 @@ def main():
             regime_dim = 5  # default regime features
 
         # Build ablated features (unless NO_REGIME which just disables regime)
-        if group == "ALL" or group in regime_off_groups:
+        if group == "ALL" or group in regime_off_groups or group == "TREND_MOMENTUM_FIRST":
             features = all_features.copy()
+        elif group == "NO_TREND_MOMENTUM":
+            # Special case: zero out BOTH trend AND momentum columns
+            features = all_features.copy()
+            all_idx = []
+            for key in ["trend", "momentum"]:
+                all_idx.extend(FEATURE_GROUPS[key]["indices"])
+            all_idx = [i for i in all_idx if 0 <= i < features.shape[1]]
+            if all_idx:
+                features[:, all_idx] = 0.0
+                print(f"\nAblating '{group}': zeroed {len(all_idx)} columns (trend + momentum)")
         else:
             ablation = group.replace("NO_", "").lower()
             if ablation in FEATURE_GROUPS:
