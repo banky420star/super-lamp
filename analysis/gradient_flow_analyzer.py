@@ -10,9 +10,10 @@ writer = SummaryWriter("/tmp/logs/gradients")
 
 class LSTMGradientDiagnostics(BaseCallback):
     """Real-time LSTM gradient flow diagnostics (works perfectly with joint training)"""
-    def __init__(self, verbose=0):
+    def __init__(self, verbose=0, pretrain_loss_reduction=None):
         super().__init__(verbose)
         self.epoch = 0
+        self.pretrain_loss_reduction = pretrain_loss_reduction
 
     def _on_step(self) -> bool:
         # Run diagnostics every 5 rollouts
@@ -55,3 +56,19 @@ class LSTMGradientDiagnostics(BaseCallback):
                 logger.warning("⚠️ Moderate LSTM flow — still healthy but monitor")
 
         writer.flush()
+
+
+
+class DiagnosticsCallback(BaseCallback):
+    """Logs basic training diagnostics at fixed intervals."""
+    def __init__(self, log_interval: int = 1000, verbose: int = 0):
+        super().__init__(verbose)
+        self.log_interval = log_interval
+        self._last_log = 0
+
+    def _on_step(self) -> bool:
+        if self.num_timesteps - self._last_log >= self.log_interval:
+            self._last_log = self.num_timesteps
+            if self.verbose > 0:
+                print(f"[Diagnostics] step={self.num_timesteps}, reward={self.locals.get('rewards', [None])[0] if 'rewards' in self.locals else 'N/A'}")
+        return True

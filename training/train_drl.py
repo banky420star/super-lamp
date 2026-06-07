@@ -1018,7 +1018,7 @@ def _stage_candidate(
 
 def _train_once(symbols: list[str], cfg: dict, total_timesteps: int, initial_balance: float, alerter=None, per_symbol_metrics: dict | None = None, realized_stats: dict | None = None):
     _require_training_stack()
-    from analysis.gradient_flow_analyzer import LSTMGradientDiagnostics
+    from analysis.gradient_flow_analyzer import LSTMGradientDiagnostics, DiagnosticsCallback
 
     class _EvalCallbackSaveVec(EvalCallback):
         def __init__(self, *args, vec_env=None, vec_save_path=None, **kwargs):
