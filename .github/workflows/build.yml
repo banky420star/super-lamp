@@ -7,7 +7,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  AGI_FEATURE_VERSION: ultimate_150
+  AGI_FEATURE_VERSION: engineered_v2
 
 jobs:
   repo-tests:
@@ -46,13 +46,13 @@ jobs:
           - EURUSDm
           - GBPUSDm
     env:
-      AGI_FEATURE_VERSION: ultimate_150
+      AGI_FEATURE_VERSION: engineered_v2
       AGI_LSTM_SYMBOLS: ${{ matrix.symbol }}
       AGI_DRL_SYMBOL: ${{ matrix.symbol }}
       AGI_DREAMER_SYMBOL: ${{ matrix.symbol }}
       AGI_CYCLE_SYMBOL: ${{ matrix.symbol }}
       AGI_CYCLE_SKIP_COMPLETED: 'true'
-      AGI_DREAMER_FEATURE_VERSION: ultimate_150
+      AGI_DREAMER_FEATURE_VERSION: engineered_v2
     steps:
       - uses: actions/checkout@v4
 
