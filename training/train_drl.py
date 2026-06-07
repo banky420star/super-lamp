@@ -22,6 +22,11 @@ import polars as pl
 import yaml
 from loguru import logger
 from drl.trading_env import TradingEnv
+
+try:
+    from drl.regime_detector import NUM_REGIMES
+except ImportError:
+    NUM_REGIMES = 5
 from Python.config_utils import DEFAULT_TRADING_SYMBOLS, load_project_config, resolve_trading_symbols
 from Python.data_feed import fetch_training_data, get_combined_training_df
 from Python.feature_pipeline import ENGINEERED_V2, ULTIMATE_150, normalize_feature_version
@@ -733,10 +738,7 @@ class RobustPPO(PPO):
                     param_group["lr"] = base_lr
 
 
-try:
-    from drl.regime_detector import NUM_REGIMES
-except Exception:
-    NUM_REGIMES = 5
+
 
 def _build_model(env, feature_version: str, ppo_params: dict):
     _require_training_stack()
