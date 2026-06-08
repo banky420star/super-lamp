@@ -118,6 +118,7 @@ ABLATION_GROUPS = [
     "NO_PATTERN",
     "NO_REGIME",
     "TREND_MOMENTUM_FIRST",
+    "NO_BIAS_SATURATION",
 ]
 
 # Feature set cardinality (for 59-col matrix or 40-col base)
@@ -424,7 +425,8 @@ def run_trial(
 
     # Build policy kwargs — use AdaptiveLSTMFeatureExtractor to match real training pipeline
     use_regime = regime_dim > 0
-    use_bias = ablation_group == "TREND_MOMENTUM_FIRST"
+    use_bias = ablation_group in ("TREND_MOMENTUM_FIRST", "NO_BIAS_SATURATION")
+    bias_fixed_temp = 0.1 if ablation_group == "NO_BIAS_SATURATION" else None
     policy_kwargs = {
         "features_extractor_class": AdaptiveLSTMFeatureExtractor,
         "features_extractor_kwargs": {
@@ -433,6 +435,7 @@ def run_trial(
             "num_heads": 4,
             "regime_dim": regime_dim,
             "use_trend_momentum_bias": use_bias,
+            "bias_fixed_temperature": bias_fixed_temp,
         },
         "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         "num_regimes": 5 if use_regime else 1,
@@ -827,7 +830,7 @@ def main():
             regime_dim = 5  # default regime features
 
         # Build ablated features (unless NO_REGIME which just disables regime)
-        if group == "ALL" or group in regime_off_groups or group == "TREND_MOMENTUM_FIRST":
+        if group == "ALL" or group in regime_off_groups or group in ("TREND_MOMENTUM_FIRST", "NO_BIAS_SATURATION"):
             features = all_features.copy()
         elif group == "NO_TREND_MOMENTUM":
             # Special case: zero out BOTH trend AND momentum columns
@@ -858,7 +861,7 @@ def main():
         print(f"  [ABLATION]   shape={features.shape}")
         print(f"  [ABLATION]   fingerprint={fprint}")
         print(f"  [ABLATION]   mean={np.nanmean(features):.6f}, std={np.nanstd(features):.6f}")
-        if group != "ALL" and group not in regime_off_groups and group != "TREND_MOMENTUM_FIRST":
+        if group != "ALL" and group not in regime_off_groups and group not in ("TREND_MOMENTUM_FIRST", "NO_BIAS_SATURATION"):
             if fprint == all_fingerprint:
                 msg = (
                     f"{group} produced IDENTICAL features to ALL. "

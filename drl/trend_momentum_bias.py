@@ -39,10 +39,11 @@ class TrendMomentumBiasLayer(nn.Module):
     policy finds directional signal worth amplifying.
     """
 
-    def __init__(self, input_dim: int, hidden_dim: int = 64):
+    def __init__(self, input_dim: int, hidden_dim: int = 64, fixed_temperature: float | None = None):
         super().__init__()
         self.input_dim = input_dim
         self.num_bias_features = 6
+        self.fixed_temperature = fixed_temperature  # if set, overrides learnable temp
 
         # Trend score: shared encoder + temperature-scaled Tanh head
         self.trend_encoder = nn.Sequential(
@@ -94,19 +95,19 @@ class TrendMomentumBiasLayer(nn.Module):
         # ── Trend: encode → head → temperature-scaled Tanh ──
         t_enc = self.trend_encoder(features)
         t_logits = self.trend_head(t_enc)
-        t_temp = F.softplus(self.trend_temp)          # always > 0, starts ~0.47
+        t_temp = self.fixed_temperature if self.fixed_temperature is not None else F.softplus(self.trend_temp)
         trend = th.tanh(t_logits * t_temp)             # (batch, 1)
 
         # ── Momentum: encode → head → temperature-scaled Tanh ──
         m_enc = self.momentum_encoder(features)
         m_logits = self.momentum_head(m_enc)
-        m_temp = F.softplus(self.momentum_temp)
+        m_temp = self.fixed_temperature if self.fixed_temperature is not None else F.softplus(self.momentum_temp)
         momentum = th.tanh(m_logits * m_temp)          # (batch, 1)
 
         # ── Confidence: encode → head → temperature-scaled Sigmoid ──
         c_enc = self.confidence_encoder(features)
         c_logits = self.confidence_head(c_enc)
-        c_temp = F.softplus(self.confidence_temp)
+        c_temp = self.fixed_temperature if self.fixed_temperature is not None else F.softplus(self.confidence_temp)
         confidence = th.sigmoid(c_logits * c_temp)     # (batch, 1)
 
         direction_bias = (trend + momentum) / 2.0      # (batch, 1)

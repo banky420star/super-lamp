@@ -136,7 +136,7 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
     after the LSTM as before.
     """
 
-    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0, use_feature_gate=False, use_trend_momentum_bias=False):
+    def __init__(self, observation_space, features_dim=256, window_size=100, num_heads=4, regime_dim=0, use_feature_gate=False, use_trend_momentum_bias=False, bias_fixed_temperature=None):
         total_obs = int(observation_space.shape[0])
         self.seq_window = int(window_size)
         self.regime_dim = int(regime_dim)
@@ -153,7 +153,7 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
         _tmp_bias = None
         bias_extra = 0
         if use_trend_momentum_bias:
-            _tmp_bias = TrendMomentumBiasLayer(input_dim=features_dim)
+            _tmp_bias = TrendMomentumBiasLayer(input_dim=features_dim, fixed_temperature=bias_fixed_temperature)
             bias_extra = _tmp_bias.num_bias_features
 
         super().__init__(observation_space, features_dim=features_dim + bias_extra + actual_portfolio_dim)
