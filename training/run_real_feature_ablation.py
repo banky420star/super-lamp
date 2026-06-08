@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import os
 import sys
 import time
@@ -121,6 +122,17 @@ ABLATION_GROUPS = [
 
 # Feature set cardinality (for 59-col matrix or 40-col base)
 FULL_FEATURE_COUNT = 59
+
+
+# ── Fingerprinting ──────────────────────────────────────────────────
+
+def matrix_fingerprint(x: np.ndarray) -> str:
+    """Stable 12-char MD5 fingerprint of a numpy array.
+
+    Converts NaN → 0, casts to float32, and hashes the raw bytes.
+    """
+    arr = np.nan_to_num(x).astype(np.float32)
+    return hashlib.md5(arr.tobytes()).hexdigest()[:12]
 
 
 # ── Real Data & Features ──────────────────────────────────────────────
@@ -687,6 +699,10 @@ def main():
     all_features, n_features = build_real_features(df, symbol=args.symbol)
     print(f"  Base feature count: {n_features}")
 
+    # ── Compute ALL baseline fingerprint for comparison ──
+    all_fingerprint = matrix_fingerprint(all_features)
+    print(f"\n  ALL fingerprint: {all_fingerprint}")
+
     # Track which groups disable regime (not a feature-column ablation)
     regime_off_groups = {"NO_REGIME"}
 
@@ -726,6 +742,25 @@ def main():
             else:
                 print(f"\nUnknown group '{group}', using ALL features")
                 features = all_features.copy()
+
+        # ── Fingerprint: verify feature mask is actually applied ──
+        fprint = matrix_fingerprint(features)
+        print(f"  [ABLATION] group={group}")
+        print(f"  [ABLATION]   shape={features.shape}")
+        print(f"  [ABLATION]   fingerprint={fprint}")
+        print(f"  [ABLATION]   mean={np.nanmean(features):.6f}, std={np.nanstd(features):.6f}")
+        if group != "ALL" and group not in regime_off_groups and group != "TREND_MOMENTUM_FIRST":
+            if fprint == all_fingerprint:
+                msg = (
+                    f"{group} produced IDENTICAL features to ALL. "
+                    f"Ablation mask was NOT applied! Check feature column indices."
+                )
+                print(f"  [ABLATION]   *** ASSERTION FAILED: {msg}")
+                raise AssertionError(msg)
+            else:
+                print(f"  [ABLATION]   differs from ALL [OK]")
+        else:
+            print(f"  [ABLATION]   matches ALL (baseline) [OK]")
 
         for trial in range(args.trials):
             result = run_trial(
@@ -778,7 +813,9 @@ def _save_results(results: list[dict], path: str):
     """Save results to CSV."""
     if not results:
         return
-    fieldnames = list(results[0].keys())
+    # Collect all unique fieldnames across all results
+    # (failed trials may have fewer fields than successful ones)
+    fieldnames = list(dict.fromkeys(k for r in results for k in r.keys()))
     # Ensure status and key metrics are always first columns
     priority = ["ablation_group", "trial_id", "completed", "status", "sharpe_ratio",
                 "profit_factor", "win_rate", "max_drawdown", "net_return_pct",
