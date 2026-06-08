@@ -10,10 +10,9 @@ Feature groups tested (59-column env matrix):
   - NO_MOMENTUM: zero out momentum features (log_ret1, log_ret5, log_ret20)
   - NO_VOLATILITY: zero out realized volatility (rv_20)
   - NO_VOLUME: zero out volume features (rel_volume, spread_est_bps)
-  - NO_CROSS_ASSET: zero out 18 cross-asset features
+  - NO_CROSS_ASSET: zero out 6 live cross-asset features (USDJPYm)
   - NO_ML_SIGNAL: zero out XGBoost signal feature
   - NO_REGIME: disable regime detector (regime_dim=0)
-  - NO_PATTERN: zero out 11 classical pattern features
 
 Each group is trained for a configurable number of timesteps on real data.
 Results are logged to a CSV for comparison.
@@ -75,13 +74,17 @@ ENGINEERED_V2_COLUMNS = [
 
 # Feature groups defined by column NAME, not index.
 # Indices are derived automatically from ENGINEERED_V2_COLUMNS.
+#
+# NOTE: 'pattern' group removed — Python/patterns/pattern_detector.py does not
+# exist, so pattern columns 29-39 are always zero.
+# NOTE: 'cross_asset' narrowed to 6 live columns (USDJPYm only) — US10Y and DXY
+# are not available in MT5 market watch, so columns 46-57 are always zero.
 FEATURE_GROUPS_BY_NAME = {
     "trend": ["htf_trend", "vol_bucket"],
     "momentum": ["log_ret1", "log_ret5", "log_ret20"],
     "volatility": ["rv_20"],
     "volume": ["rel_volume", "spread_est_bps"],
-    "pattern": [f"pattern_{i}" for i in range(11)],
-    "cross_asset": [f"cross_asset_{i}" for i in range(18)],
+    "cross_asset": [f"cross_asset_{i}" for i in range(6)],  # only 6 live out of 18
     "ml_signal": ["ml_signal"],
 }
 
@@ -104,7 +107,6 @@ ABLATION_GROUPS = [
     "NO_VOLUME",
     "NO_CROSS_ASSET",
     "NO_ML_SIGNAL",
-    "NO_PATTERN",
     "NO_REGIME",
     "TREND_MOMENTUM_FIRST",
     "NO_BIAS_SATURATION",
