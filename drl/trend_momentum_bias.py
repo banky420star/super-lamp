@@ -15,6 +15,7 @@ Architecture placement:
 
 import torch as th
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class TrendMomentumBiasLayer(nn.Module):
@@ -32,6 +33,10 @@ class TrendMomentumBiasLayer(nn.Module):
         col 3: confidence         [ 0 ..  1]  how reliable the bias is
         col 4: agreement          [ 0 ..  1]  trend-momentum alignment
         col 5: persistent_bias    [-1 .. +1]  hysteresis-smoothed bias
+
+    Uses temperature-scaled activations with small-weight init to prevent
+    saturation — the Tanh outputs start near 0 and grow only as the PPO
+    policy finds directional signal worth amplifying.
     """
 
     def __init__(self, input_dim: int, hidden_dim: int = 64):
@@ -39,32 +44,37 @@ class TrendMomentumBiasLayer(nn.Module):
         self.input_dim = input_dim
         self.num_bias_features = 6
 
-        # Trend score: small MLP -> Tanh (-1 to +1)
-        self.trend_net = nn.Sequential(
+        # Trend score: shared encoder + temperature-scaled Tanh head
+        self.trend_encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Tanh(),
         )
+        self.trend_head = nn.Linear(hidden_dim, 1)
+        self.trend_temp = nn.Parameter(th.tensor(-0.5))  # softplus(-0.5) ≈ 0.47
 
-        # Momentum score: small MLP -> Tanh (-1 to +1)
-        self.momentum_net = nn.Sequential(
+        # Momentum score: shared encoder + temperature-scaled Tanh head
+        self.momentum_encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Tanh(),
         )
+        self.momentum_head = nn.Linear(hidden_dim, 1)
+        self.momentum_temp = nn.Parameter(th.tensor(-0.5))
 
-        # Confidence: small MLP -> Sigmoid (0 to 1)
-        self.confidence_net = nn.Sequential(
+        # Confidence: shared encoder + temperature-scaled Sigmoid head
+        self.confidence_encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Sigmoid(),
         )
+        self.confidence_head = nn.Linear(hidden_dim, 1)
+        self.confidence_temp = nn.Parameter(th.tensor(-0.5))
+
+        # ── Initialise final linear heads with tiny weights so bias
+        #    outputs start near zero rather than saturating Tanh/Sigmoid.
+        for head in [self.trend_head, self.momentum_head, self.confidence_head]:
+            nn.init.normal_(head.weight, std=0.01)
 
         # Persistent bias state for hysteresis smoothing during eval
         self.register_buffer('_persistent_bias', th.zeros(1))
@@ -81,10 +91,25 @@ class TrendMomentumBiasLayer(nn.Module):
         Returns:
             (batch, input_dim + 6) -- original features with 6 bias signals appended.
         """
-        trend = self.trend_net(features)            # (batch, 1)
-        momentum = self.momentum_net(features)       # (batch, 1)
-        direction_bias = (trend + momentum) / 2.0    # (batch, 1)
-        confidence = self.confidence_net(features)   # (batch, 1)
+        # ── Trend: encode → head → temperature-scaled Tanh ──
+        t_enc = self.trend_encoder(features)
+        t_logits = self.trend_head(t_enc)
+        t_temp = F.softplus(self.trend_temp)          # always > 0, starts ~0.47
+        trend = th.tanh(t_logits * t_temp)             # (batch, 1)
+
+        # ── Momentum: encode → head → temperature-scaled Tanh ──
+        m_enc = self.momentum_encoder(features)
+        m_logits = self.momentum_head(m_enc)
+        m_temp = F.softplus(self.momentum_temp)
+        momentum = th.tanh(m_logits * m_temp)          # (batch, 1)
+
+        # ── Confidence: encode → head → temperature-scaled Sigmoid ──
+        c_enc = self.confidence_encoder(features)
+        c_logits = self.confidence_head(c_enc)
+        c_temp = F.softplus(self.confidence_temp)
+        confidence = th.sigmoid(c_logits * c_temp)     # (batch, 1)
+
+        direction_bias = (trend + momentum) / 2.0      # (batch, 1)
         agreement = 1.0 - th.abs(trend - momentum) / 2.0  # (batch, 1)
 
         batch_size = features.shape[0]
