@@ -468,6 +468,11 @@ def run_trial(
         model.learn(total_timesteps=total_timesteps)
         elapsed = time.time() - start_time
 
+        # ── Bias diagnostics (for TREND_MOMENTUM_FIRST, always on) ──
+        if use_bias:
+            print(f"\n  [BIAS] Running bias layer diagnostics...")
+            _diagnose_bias(model, feature_matrix, close_prices, window_size, regime_dim)
+
         # ── Evaluate on validation split ──
         val_metrics = _evaluate(model, feature_matrix, close_prices, window_size, regime_dim)
 
@@ -495,6 +500,110 @@ def run_trial(
             print(f"  [FAIL] {exc}")
 
     return result
+
+
+def _diagnose_bias(
+    model: RegimeRoutedPPO,
+    feature_matrix: np.ndarray,
+    close_prices: np.ndarray,
+    window_size: int,
+    regime_dim: int,
+    val_split: float = 0.7,
+) -> None:
+    """Log diagnostics for the TrendMomentumBiasLayer inside the model.
+
+    Runs a forward pass over the validation split and aggregates bias scores.
+    """
+    extractor = model.policy.features_extractor
+    bias_layer = getattr(extractor, 'trend_momentum_bias', None)
+    if bias_layer is None:
+        print("  [BIAS] No TrendMomentumBiasLayer found in model")
+        return
+
+    # Reset persistent bias before diagnostic pass
+    bias_layer.reset_persistent_bias()
+
+    n = len(feature_matrix)
+    val_start = int(n * val_split)
+    n_features = feature_matrix.shape[1]
+
+    if val_start + window_size + 50 >= n:
+        print("  [BIAS] Not enough validation data for diagnostics")
+        return
+
+    # Collect scores over validation range
+    trend_vals = []
+    momentum_vals = []
+    direction_vals = []
+    confidence_vals = []
+    agreement_vals = []
+    persistent_vals = []
+
+    with th.no_grad():
+        for i in range(val_start, n - 1):
+            start = i - window_size
+            window = feature_matrix[start:i]
+            flat = window.reshape(-1)
+
+            if regime_dim > 0:
+                regime_feat = np.zeros(regime_dim, dtype=np.float32)
+                regime_feat[1] = 1.0 if feature_matrix[i - 1, 0] > 0 else 0.0
+                obs = np.concatenate([flat, regime_feat]).astype(np.float32)
+            else:
+                obs = flat.astype(np.float32)
+
+            # Trigger forward pass through the extractor (model.predict goes through policy)
+            model.predict(obs.reshape(1, -1), deterministic=True)
+
+            scores = bias_layer.last_scores
+            if scores:
+                trend_vals.append(scores["trend"][0, 0].item())
+                momentum_vals.append(scores["momentum"][0, 0].item())
+                direction_vals.append(scores["direction_bias"][0, 0].item())
+                confidence_vals.append(scores["confidence"][0, 0].item())
+                agreement_vals.append(scores["agreement"][0, 0].item())
+                persistent_vals.append(scores["persistent_bias"][0, 0].item())
+
+    if not direction_vals:
+        print("  [BIAS] No bias scores collected")
+        return
+
+    direction_arr = np.array(direction_vals, dtype=np.float32)
+    confidence_arr = np.array(confidence_vals, dtype=np.float32)
+    trend_arr = np.array(trend_vals, dtype=np.float32)
+    momentum_arr = np.array(momentum_vals, dtype=np.float32)
+    persistent_arr = np.array(persistent_vals, dtype=np.float32)
+
+    # Categorise direction into buckets
+    def _bucket(v):
+        if v > 0.3:
+            return "bullish"
+        elif v < -0.3:
+            return "bearish"
+        else:
+            return "range"
+
+    buckets = np.array([_bucket(v) for v in direction_arr])
+    unique, counts = np.unique(buckets, return_counts=True)
+
+    print(f"  [BIAS] direction_counts={dict(zip(unique, counts.tolist()))}")
+    print(f"  [BIAS] confidence_mean={np.nanmean(confidence_arr):.6f}")
+    print(f"  [BIAS] confidence_std={np.nanstd(confidence_arr):.6f}")
+    print(f"  [BIAS] trend_mean={np.nanmean(trend_arr):.6f}")
+    print(f"  [BIAS] momentum_mean={np.nanmean(momentum_arr):.6f}")
+    print(f"  [BIAS] persistent_mean={np.nanmean(persistent_arr):.6f}")
+
+    # Future direction agreement
+    if len(direction_arr) >= 2:
+        future_ret = np.sign(np.diff(close_prices[val_start:n]))
+        min_len = min(len(direction_arr), len(future_ret))
+        bias_dir = np.sign(direction_arr[:min_len])
+        future_dir = future_ret[:min_len]
+        agreement = np.mean(bias_dir == future_dir)
+        print(f"  [BIAS] future_direction_agreement={agreement:.4f}")
+
+    # Reset persistent bias after diagnostics so it doesn't leak into eval
+    bias_layer.reset_persistent_bias()
 
 
 def _evaluate(

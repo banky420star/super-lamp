@@ -69,6 +69,9 @@ class TrendMomentumBiasLayer(nn.Module):
         # Persistent bias state for hysteresis smoothing during eval
         self.register_buffer('_persistent_bias', th.zeros(1))
 
+        # Stored scores from the last forward pass for diagnostics
+        self.last_scores: dict[str, th.Tensor] = {}
+
     def forward(self, features: th.Tensor, use_persistence: bool = True) -> th.Tensor:
         """
         Args:
@@ -96,7 +99,7 @@ class TrendMomentumBiasLayer(nn.Module):
                     persistent_bias = self._persistent_bias + diff * 0.4
                 else:
                     # Stay with current bias
-                    persistent_bias = self._persistent_bias.clone()
+                    persistent_bias = self._persistent_bias.clone().view(1, 1)
                 self._persistent_bias = persistent_bias.detach()
             else:
                 # Batched eval: no per-sample state, use raw bias
@@ -108,6 +111,17 @@ class TrendMomentumBiasLayer(nn.Module):
             [trend, momentum, direction_bias, confidence, agreement, persistent_bias],
             dim=1,
         )
+
+        # Store raw scores for diagnostics (detached, float32)
+        self.last_scores = {
+            "trend": trend.detach(),
+            "momentum": momentum.detach(),
+            "direction_bias": direction_bias.detach(),
+            "confidence": confidence.detach(),
+            "agreement": agreement.detach(),
+            "persistent_bias": persistent_bias.detach(),
+        }
+
         return th.cat([features, bias_features], dim=1)
 
     def reset_persistent_bias(self):
