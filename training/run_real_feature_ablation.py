@@ -726,6 +726,17 @@ def _evaluate(
         "avg_win": round(float(avg_win), 6),
         "avg_loss": round(float(avg_loss), 6),
         "validation_samples": int(min_len),
+        # Position-level diagnostics — reveals whether different feature sets
+        # produce different trading behaviour even if aggregate metrics match.
+        "action_hash": matrix_fingerprint(positions.reshape(-1, 1)),
+        "position_mean": round(float(np.mean(positions)), 6),
+        "position_std": round(float(np.std(positions)), 6),
+        "position_min": round(float(np.min(positions)), 6),
+        "position_max": round(float(np.max(positions)), 6),
+        "long_pct": round(float(np.mean(positions > 0.05)), 6),
+        "short_pct": round(float(np.mean(positions < -0.05)), 6),
+        "flat_pct": round(float(np.mean(np.abs(positions) <= 0.05)), 6),
+        "action_abs_mean": round(float(np.mean(np.abs(positions))), 6),
     }
 
 
@@ -963,16 +974,41 @@ def main():
             status = "OK" if r.get("completed") else "FAIL"
             print(f"{r['ablation_group']:<20} {sharpe:<10.3f} {wr:<10.2%} {pf:<10.2f} {dd:<10.4f} {tc:<8} {et:<8.1f}s {status}")
 
-        # ── Determinism check: compare model weights across groups ──
+        # ── Determinism check: compare model weights and action trajectories ──
         weights = {r["ablation_group"]: r.get("weight_fingerprint", "N/A") for r in completed}
+        actions = {r["ablation_group"]: r.get("action_hash", "N/A") for r in completed}
         unique_weights = set(weights.values())
+        unique_actions = set(actions.values())
         print(f"\n[DETERMINISM] Model weight fingerprints:")
         for g, w in weights.items():
             print(f"  {g}: {w}")
-        if len(unique_weights) == 1:
-            print(f"[DETERMINISM] *** WARNING: All groups have IDENTICAL model weights — training may be deterministic or feature differences are too subtle")
+        print(f"[DETERMINISM] Action trajectory hashes:")
+        for g, a in actions.items():
+            print(f"  {g}: {a}")
+        
+        if len(unique_weights) == 1 and len(unique_actions) == 1:
+            print(f"[DETERMINISM] *** IDENTICAL weights AND actions — training is effectively deterministic")
+        elif len(unique_weights) > 1 and len(unique_actions) == 1:
+            print(f"[DETERMINISM] Different weights but IDENTICAL actions — policy internals differ but output behaviour converges")
+        elif len(unique_weights) == 1 and len(unique_actions) > 1:
+            print(f"[DETERMINISM] Same weights but DIFFERENT actions — action head is stochastic or validation path differs")
         else:
-            print(f"[DETERMINISM] {len(unique_weights)} distinct weight sets across {len(completed)} groups — models are learning different things")
+            print(f"[DETERMINISM] {len(unique_weights)} distinct weight sets, {len(unique_actions)} distinct action trajectories — groups produce genuinely different behaviour")
+
+        # ── Position distribution summary ──
+        print(f"\n[POSITIONS] Per-group position distribution:")
+        print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10}")
+        print(f"  {'-'*90}")
+        for r in completed:
+            pm = r.get("position_mean", 0)
+            ps = r.get("position_std", 0)
+            pmin = r.get("position_min", 0)
+            pmax = r.get("position_max", 0)
+            lp = r.get("long_pct", 0)
+            sp = r.get("short_pct", 0)
+            fp = r.get("flat_pct", 0)
+            am = r.get("action_abs_mean", 0)
+            print(f"  {r['ablation_group']:<20} {pm:<10.4f} {ps:<10.4f} {pmin:<10.4f} {pmax:<10.4f} {lp:<8.1%} {sp:<8.1%} {fp:<8.1%} {am:<10.4f}")
 
         # Best performer by Sharpe
         best = max(completed, key=lambda r: r.get("sharpe_ratio", -999))
