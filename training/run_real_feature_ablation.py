@@ -64,9 +64,9 @@ os.environ["SB3_VERBOSE"] = "0"
 #   rv_20                                         -> 12
 #   rel_volume                                    -> 13
 #   spread_est_bps                                -> 14
-#   htf_trend                                     -> 15
-#   vol_bucket                                    -> 16
-#   hour_sin, hour_cos, dow_sin, dow_cos          -> 17-20
+#   hour_sin, hour_cos, dow_sin, dow_cos          -> 15-18
+#   htf_trend                                     -> 19
+#   vol_bucket                                    -> 20
 #   session_london, session_ny, major_open        -> 21-23
 #   news_prox, news_soon, session_overlap,
 #     mins_since_london, news_avoid               -> 24-28
@@ -76,8 +76,8 @@ os.environ["SB3_VERBOSE"] = "0"
 
 FEATURE_GROUPS = {
     "trend": {
-        "indices": [15, 16],
-        "description": "Trend strength indicator, volatility bucket",
+        "indices": [19, 20],
+        "description": "Trend strength indicator (htf_trend), volatility bucket (vol_bucket)",
     },
     "momentum": {
         "indices": [5, 6, 7],
