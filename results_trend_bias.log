@@ -1,0 +1,100 @@
+[32m2026-06-08 16:56:27.232[0m | [1mINFO    [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m131[0m - [1mCross-asset: fetched 8978 bars for USDJPYm (5m)[0m
+[32m2026-06-08 16:56:27.270[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y[0m
+[32m2026-06-08 16:56:27.271[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.288[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10YR[0m
+[32m2026-06-08 16:56:27.289[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10YR@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.307[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y.BOND[0m
+[32m2026-06-08 16:56:27.308[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y.BOND@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.325[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10Y.cfd[0m
+[32m2026-06-08 16:56:27.326[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10Y.cfd@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.344[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: US10YT[0m
+[32m2026-06-08 16:56:27.345[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for US10YT@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.345[0m | [34m[1mDEBUG   [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m138[0m - [34m[1mCross-asset: US10Y not available after all fallbacks[0m
+[32m2026-06-08 16:56:27.362[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DXY[0m
+[32m2026-06-08 16:56:27.363[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DXY@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.380[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: USDX[0m
+[32m2026-06-08 16:56:27.381[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for USDX@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.397[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DOLLAR_INDEX[0m
+[32m2026-06-08 16:56:27.398[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DOLLAR_INDEX@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.416[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: USDOLLAR[0m
+[32m2026-06-08 16:56:27.417[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for USDOLLAR@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.436[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DXY.cfd[0m
+[32m2026-06-08 16:56:27.437[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DXY.cfd@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.454[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36m_fetch_mt5_data[0m:[36m491[0m - [33m[1msymbol not available in MT5 market watch: DX[0m
+[32m2026-06-08 16:56:27.455[0m | [33m[1mWARNING [0m | [36mPython.data_feed[0m:[36mfetch_training_data[0m:[36m579[0m - [33m[1mNo data (live or cache) for DX@5m - returning empty (will degrade gracefully upstream)[0m
+[32m2026-06-08 16:56:27.455[0m | [34m[1mDEBUG   [0m | [36mPython.cross_asset[0m:[36m_fetch_cross_data[0m:[36m138[0m - [34m[1mCross-asset: DXY not available after all fallbacks[0m
+[32m2026-06-08 16:56:27.827[0m | [1mINFO    [0m | [36mPython.ml_signal[0m:[36mcompute_ml_signal[0m:[36m80[0m - [1mML Signal: XGBoost trained on 5000 x 58[0m
+============================================================
+REAL FEATURE ABLATION TEST HARNESS
+============================================================
+Symbol: XAUUSDm
+Steps per trial: 30000
+Trials per group: 1
+Groups: TREND_MOMENTUM_FIRST, ALL, NO_TREND, NO_MOMENTUM
+Bars: 5000
+Window: 100
+============================================================
+
+Loading real data for XAUUSDm...
+  Loaded 5000 bars of XAUUSDm from data_feed
+  Got 5000 bars of data
+
+Computing reward signal...
+
+Building base feature matrix (ALL)...
+  Feature matrix: 59 columns x 5000 bars
+  Base feature count: 59
+
+============================================================
+Trial 0: Ablation 'TREND_MOMENTUM_FIRST'
+  Features per bar: 59
+  Regime dim: 5
+  Total timesteps: 30000
+============================================================
+  [OK] Completed in 2326.5s | Sharpe: -9.597 | WinRate: 49.3% | PF: 0.90
+
+============================================================
+Trial 0: Ablation 'ALL'
+  Features per bar: 59
+  Regime dim: 5
+  Total timesteps: 30000
+============================================================
+  [OK] Completed in 2181.3s | Sharpe: 9.597 | WinRate: 50.7% | PF: 1.11
+
+Ablating 'NO_TREND': zeroed 2 columns
+
+============================================================
+Trial 0: Ablation 'NO_TREND'
+  Features per bar: 59
+  Regime dim: 5
+  Total timesteps: 30000
+============================================================
+  [OK] Completed in 2196.4s | Sharpe: 9.597 | WinRate: 50.7% | PF: 1.11
+
+Ablating 'NO_MOMENTUM': zeroed 3 columns
+
+============================================================
+Trial 0: Ablation 'NO_MOMENTUM'
+  Features per bar: 59
+  Regime dim: 5
+  Total timesteps: 30000
+============================================================
+  [OK] Completed in 2169.5s | Sharpe: 9.597 | WinRate: 50.7% | PF: 1.11
+
+============================================================
+SUMMARY
+============================================================
+Total trials: 4
+Completed: 4
+Failed: 0
+
+Group                Sharpe     WinRate    PF         Drawdown   Trades   Time    
+----------------------------------------------------------------------
+TREND_MOMENTUM_FIRST -9.597     49.33%     0.90       -0.0170    1498     2326.5  s OK
+ALL                  9.597      50.67%     1.11       -0.0199    1498     2181.3  s OK
+NO_TREND             9.597      50.67%     1.11       -0.0199    1498     2196.4  s OK
+NO_MOMENTUM          9.597      50.67%     1.11       -0.0199    1498     2169.5  s OK
+
+Best Sharpe: ALL (9.597)
+
+Results saved to: logs/real_feature_ablation_results.csv

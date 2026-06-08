@@ -1,0 +1,4 @@
+ablation_group,trial_id,completed,status,sharpe_ratio,profit_factor,win_rate,max_drawdown,net_return_pct,trade_count,avg_win,avg_loss,total_timesteps,elapsed_seconds,validation_samples
+ALL,0,True,ok,1.9433,1.0218,0.52349,-0.017844,0.1982,298,0.000633,-0.00068,1000,72.4,299
+NO_TREND,0,True,ok,-5.7809,0.9787,0.47651,-0.016374,-0.5347,298,0.00068,-0.000633,1000,64.8,299
+NO_MOMENTUM,0,True,ok,1.9433,1.0218,0.52349,-0.017844,0.1982,298,0.000633,-0.00068,1000,69.7,299
