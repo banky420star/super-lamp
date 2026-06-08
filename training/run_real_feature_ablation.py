@@ -127,6 +127,20 @@ def matrix_fingerprint(x: np.ndarray) -> str:
     return hashlib.md5(arr.tobytes()).hexdigest()[:12]
 
 
+def _model_weight_fingerprint(model) -> str:
+    """Hash all trainable model parameters into a 12-char fingerprint.
+
+    Two models with identical weights produce the same fingerprint.
+    """
+    parts = []
+    for _name, param in sorted(model.policy.named_parameters()):
+        parts.append(param.detach().cpu().numpy().ravel())
+    if not parts:
+        return "no_params"
+    flat = np.concatenate(parts)
+    return hashlib.md5(flat.astype(np.float32).tobytes()).hexdigest()[:12]
+
+
 # ── Real Data & Features ──────────────────────────────────────────────
 
 def load_real_data(
@@ -474,6 +488,7 @@ def run_trial(
             "elapsed_seconds": round(elapsed, 1),
             "completed": True,
             "status": "ok",
+            "weight_fingerprint": _model_weight_fingerprint(model),
             **val_metrics,
         })
 
@@ -947,6 +962,17 @@ def main():
             et = r.get("elapsed_seconds", 0)
             status = "OK" if r.get("completed") else "FAIL"
             print(f"{r['ablation_group']:<20} {sharpe:<10.3f} {wr:<10.2%} {pf:<10.2f} {dd:<10.4f} {tc:<8} {et:<8.1f}s {status}")
+
+        # ── Determinism check: compare model weights across groups ──
+        weights = {r["ablation_group"]: r.get("weight_fingerprint", "N/A") for r in completed}
+        unique_weights = set(weights.values())
+        print(f"\n[DETERMINISM] Model weight fingerprints:")
+        for g, w in weights.items():
+            print(f"  {g}: {w}")
+        if len(unique_weights) == 1:
+            print(f"[DETERMINISM] *** WARNING: All groups have IDENTICAL model weights — training may be deterministic or feature differences are too subtle")
+        else:
+            print(f"[DETERMINISM] {len(unique_weights)} distinct weight sets across {len(completed)} groups — models are learning different things")
 
         # Best performer by Sharpe
         best = max(completed, key=lambda r: r.get("sharpe_ratio", -999))
