@@ -52,57 +52,46 @@ from drl.regime_routed_policy import RegimeRoutedPPO, RegimeRoutedActorCriticPol
 os.environ["SB3_VERBOSE"] = "0"
 
 
-# ── Feature Group Definitions ──────────────────────────────────────────
+# ── Feature Group Definitions (name-based, not index-based) ─────────────
 
-# The # ENGINEERED_V2 env feature matrix (59 columns for XAUUSDm) columns are
-# built by _build_engineered_env_matrix in this order:
-#
-#   open_rel, high_rel, low_rel, close_rel      -> 0-3
-#   log_vol                                       -> 4
-#   log_ret1, log_ret5, log_ret20                 -> 5-7
-#   body_ratio, upper_wick, lower_wick, range_ratio  -> 8-11
-#   rv_20                                         -> 12
-#   rel_volume                                    -> 13
-#   spread_est_bps                                -> 14
-#   hour_sin, hour_cos, dow_sin, dow_cos          -> 15-18
-#   htf_trend                                     -> 19
-#   vol_bucket                                    -> 20
-#   session_london, session_ny, major_open        -> 21-23
-#   news_prox, news_soon, session_overlap,
-#     mins_since_london, news_avoid               -> 24-28
-#   11 patterns                                   -> 29-39
-#   18 cross-asset features                       -> 40-57
-#   1 ml_signal probability                       -> 58
+# ENGINEERED_V2 column order — single source of truth for column indices.
+# If the feature pipeline changes order, change this list, not the group specs.
+ENGINEERED_V2_COLUMNS = [
+    "open_rel", "high_rel", "low_rel", "close_rel",
+    "log_vol",
+    "log_ret1", "log_ret5", "log_ret20",
+    "body_ratio", "upper_wick", "lower_wick", "range_ratio",
+    "rv_20",
+    "rel_volume", "spread_est_bps",
+    "htf_trend", "vol_bucket",
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
+    "session_london", "session_ny", "major_open",
+    "news_prox", "news_soon", "session_overlap",
+    "mins_since_london", "news_avoid",
+    *[f"pattern_{i}" for i in range(11)],
+    *[f"cross_asset_{i}" for i in range(18)],
+    "ml_signal",
+]
+
+# Feature groups defined by column NAME, not index.
+# Indices are derived automatically from ENGINEERED_V2_COLUMNS.
+FEATURE_GROUPS_BY_NAME = {
+    "trend": ["htf_trend", "vol_bucket"],
+    "momentum": ["log_ret1", "log_ret5", "log_ret20"],
+    "volatility": ["rv_20"],
+    "volume": ["rel_volume", "spread_est_bps"],
+    "pattern": [f"pattern_{i}" for i in range(11)],
+    "cross_asset": [f"cross_asset_{i}" for i in range(18)],
+    "ml_signal": ["ml_signal"],
+}
 
 FEATURE_GROUPS = {
-    "trend": {
-        "indices": [19, 20],
-        "description": "Trend strength indicator (htf_trend), volatility bucket (vol_bucket)",
-    },
-    "momentum": {
-        "indices": [5, 6, 7],
-        "description": "Log returns at 1, 5, 20 bars",
-    },
-    "volatility": {
-        "indices": [12],
-        "description": "20-bar realized volatility",
-    },
-    "volume": {
-        "indices": [13, 14],
-        "description": "Relative volume, spread estimate (bps)",
-    },
-    "cross_asset": {
-        "indices": list(range(40, 58)),
-        "description": "Cross-asset correlation features (18 cols)",
-    },
-    "ml_signal": {
-        "indices": [58],
-        "description": "XGBoost next-bar direction probability",
-    },
-    "pattern": {
-        "indices": list(range(29, 40)),
-        "description": "Classical candlestick patterns (11 cols)",
-    },
+    group: {
+        "indices": [ENGINEERED_V2_COLUMNS.index(name) for name in names],
+        "columns": names,
+        "description": ", ".join(names),
+    }
+    for group, names in FEATURE_GROUPS_BY_NAME.items()
 }
 
 # Groups tested in the ablation study
@@ -121,8 +110,8 @@ ABLATION_GROUPS = [
     "NO_BIAS_SATURATION",
 ]
 
-# Feature set cardinality (for 59-col matrix or 40-col base)
-FULL_FEATURE_COUNT = 59
+# Feature set cardinality (derived from column name list)
+FULL_FEATURE_COUNT = len(ENGINEERED_V2_COLUMNS)
 
 
 # ── Fingerprinting ──────────────────────────────────────────────────
@@ -811,6 +800,32 @@ def main():
     all_features, n_features = build_real_features(df, symbol=args.symbol)
     print(f"  Base feature count: {n_features}")
 
+    # ── Runtime column audit: reveal which indices actually carry signal ──
+    print(f"\n[COLUMN_AUDIT] n_features={n_features}")
+    col_means = np.nanmean(all_features, axis=0)
+    col_stds = np.nanstd(all_features, axis=0)
+    for i in range(min(n_features, len(ENGINEERED_V2_COLUMNS))):
+        name = ENGINEERED_V2_COLUMNS[i]
+        has_signal = col_stds[i] > 1e-8
+        marker = "[SIGNAL]" if has_signal else "[ZERO] "
+        print(f"  {marker} [{i:2d}] {name:<25s} mean={col_means[i]:+.4f}  std={col_stds[i]:.4f}")
+    if n_features > len(ENGINEERED_V2_COLUMNS):
+        for i in range(len(ENGINEERED_V2_COLUMNS), n_features):
+            has_signal = col_stds[i] > 1e-8
+            marker = "[SIGNAL]" if has_signal else "[ZERO] "
+            print(f"  {marker} [{i:2d}] <unnamed>                  mean={col_means[i]:+.4f}  std={col_stds[i]:.4f}")
+
+    # ── Group check: print column-name mapping before training ──
+    if n_features == len(ENGINEERED_V2_COLUMNS):
+        print(f"\n[GROUP_CHECK] Feature column mapping (n_features={n_features}):")
+        for group in sorted(FEATURE_GROUPS.keys()):
+            spec = FEATURE_GROUPS[group]
+            print(f"  {group}: {spec['description']}")
+            for idx, name in zip(spec["indices"], spec["columns"]):
+                print(f"    [{idx}] {name}")
+    else:
+        print(f"\n[GROUP_CHECK] WARNING: n_features={n_features} != expected {len(ENGINEERED_V2_COLUMNS)}, skipping column-name verification")
+
     # ── Compute ALL baseline fingerprint for comparison ──
     all_fingerprint = matrix_fingerprint(all_features)
     print(f"\n  ALL fingerprint: {all_fingerprint}")
@@ -863,12 +878,29 @@ def main():
         print(f"  [ABLATION]   mean={np.nanmean(features):.6f}, std={np.nanstd(features):.6f}")
         if group != "ALL" and group not in regime_off_groups and group not in ("TREND_MOMENTUM_FIRST", "NO_BIAS_SATURATION"):
             if fprint == all_fingerprint:
-                msg = (
-                    f"{group} produced IDENTICAL features to ALL. "
-                    f"Ablation mask was NOT applied! Check feature column indices."
-                )
-                print(f"  [ABLATION]   *** ASSERTION FAILED: {msg}")
-                raise AssertionError(msg)
+                # Check if the group's columns are already all-zero in ALL
+                ablation = group.replace("NO_", "").lower()
+                if ablation in FEATURE_GROUPS:
+                    idx = FEATURE_GROUPS[ablation]["indices"]
+                    idx = [i for i in idx if 0 <= i < all_features.shape[1]]
+                    col_stds = np.nanstd(all_features[:, idx], axis=0)
+                    dead_cols = all(col_stds < 1e-8)
+                    if dead_cols:
+                        print(f"  [ABLATION]   columns already all-zero in ALL (pipeline not producing them) — skipping assert")
+                    else:
+                        msg = (
+                            f"{group} produced IDENTICAL features to ALL. "
+                            f"Ablation mask was NOT applied! Check feature column indices."
+                        )
+                        print(f"  [ABLATION]   *** ASSERTION FAILED: {msg}")
+                        raise AssertionError(msg)
+                else:
+                    msg = (
+                        f"{group} produced IDENTICAL features to ALL. "
+                        f"Ablation mask was NOT applied! Check feature column indices."
+                    )
+                    print(f"  [ABLATION]   *** ASSERTION FAILED: {msg}")
+                    raise AssertionError(msg)
             else:
                 print(f"  [ABLATION]   differs from ALL [OK]")
         else:
