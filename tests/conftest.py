@@ -1,3 +1,8 @@
+import warnings
+import threading
+
+import pytest
+
 import os
 import sys
 
@@ -55,3 +60,31 @@ def pytest_configure(config):
         HybridBrain._start_autonomy_if_enabled = lambda self: None
     except (ImportError, AttributeError):
         pass
+
+
+# ── Thread leak detection ──────────────────────────────────────────────────
+# Background threads started by imported modules can survive across test
+# modules and access stale state, causing segfaults.  This fixture warns
+# when a test module starts threads that are still alive after it finishes.
+# ───────────────────────────────────────────────────────────────────────────
+@pytest.fixture(autouse=True, scope="module")
+def _detect_thread_leaks():
+    """Warn about and join background threads surviving past the test module."""
+    main = threading.main_thread()
+    before = {t.ident: t for t in threading.enumerate() if t is not main}
+    yield
+    after = {t.ident: t for t in threading.enumerate() if t is not main}
+    leaked = {}
+    for tid, t in after.items():
+        if tid not in before and tid is not None:
+            leaked[tid] = t
+    if leaked:
+        names = ", ".join(t.name for t in leaked.values())
+        warnings.warn(f"Thread leak between test modules: {names}")
+        # Attempt to join non-daemon threads; daemon threads cannot be
+        # safely joined (they run infinite loops) — just report them.
+        for t in leaked.values():
+            if not t.daemon:
+                t.join(timeout=1.0)
+                if t.is_alive():
+                    warnings.warn(f"Thread still alive after join: {t.name}")
