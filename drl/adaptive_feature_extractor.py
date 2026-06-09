@@ -4,6 +4,12 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from drl.trend_momentum_bias import TrendMomentumBiasLayer
 
+# Number of regime classes (one-hot dimension, excluding confidence)
+try:
+    from drl.regime_detector import NUM_REGIMES
+except Exception:
+    NUM_REGIMES = 5
+
 
 class FeatureGroupGate(torch.nn.Module):
     """
@@ -161,6 +167,7 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
         # Now assign the bias layer to self (Module.__init__ has been called)
         self.trend_momentum_bias = _tmp_bias
         self.seq_feature_dim = seq_flat // self.seq_window
+        self.num_regime_classes = min(NUM_REGIMES, max(0, self.regime_dim))
         lstm_input_dim = self.seq_feature_dim + self.regime_dim
         self.encoder = torch.nn.LSTM(
             input_size=lstm_input_dim, hidden_size=160, num_layers=2,
@@ -176,11 +183,15 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
         self.lstm_norm = torch.nn.LayerNorm(self.lstm_hidden)
 
         # Regime-conditional feature group gating
+        # num_regime_classes = number of one-hot regime classes (5), not
+        # regime_dim (6, which includes confidence).  Using regime_dim here
+        # would create a dimension mismatch when the gate receives only the
+        # one-hot slice of the tail.
         if use_feature_gate and self.regime_dim > 0:
             self.feature_gate = FeatureGroupGate(
                 hidden_dim=self.lstm_hidden,
                 num_groups=4,
-                num_regimes=self.regime_dim,
+                num_regimes=self.num_regime_classes,
             )
         else:
             self.feature_gate = None
@@ -205,11 +216,11 @@ class AdaptiveLSTMFeatureExtractor(BaseFeaturesExtractor):
 
         # v6: Regime-conditional feature group gating
         if self.feature_gate is not None and self.regime_dim > 0 and regime is not None:
-            # Extract regime probs from the regime observation (tail of seq features)
-            # regime: [batch, regime_dim] - the regime features injected into LSTM
-            # First num_regimes dims are one-hot, remaining is confidence
-            regime_onehot = regime[:, :self.num_regimes]
-            if regime_onehot.shape[-1] >= self.num_regimes:
+            # Extract the one-hot slice from the regime tail.
+            # regime: [batch, regime_dim] where first num_regime_classes dims
+            # are one-hot, and the remaining is confidence.
+            regime_onehot = regime[:, :self.num_regime_classes]
+            if regime_onehot.shape[-1] >= self.num_regime_classes:
                 lstm_out = self.feature_gate(lstm_out, regime_onehot)
 
         projected = self.projection(lstm_out)

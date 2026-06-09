@@ -84,7 +84,7 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
         self.num_regimes = num_regimes
         self.regime_dim = int(regime_dim)
         self.action_head_lr_mult = action_head_lr_mult or float(
-            os.environ.get("AGI_PPO_ACTION_HEAD_LR_MULT", "5.0")
+            os.environ.get("AGI_PPO_ACTION_HEAD_LR_MULT", "2.0")
         )
         self._last_regime_logits = None
         self._last_regime_probs = None

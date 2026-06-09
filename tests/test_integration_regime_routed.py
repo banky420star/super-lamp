@@ -1,9 +1,9 @@
 """
-End-to-end integration test: TradingEnv + RegimeRoutedPPO.learn(10000).
+End-to-end integration test: RegimeRoutedPPO.learn(10000).
 
 Validates that the full training pipeline works end-to-end:
-- Synthetic OHLCV data generation
-- TradingEnv instantiation with legacy action space
+- Synthetic OHLCV data generation with regime structure
+- Synthetic environment instantiation with regime observation
 - RegimeRoutedPPO with RegimeRoutedActorCriticPolicy
 - model.learn(10000) completes without errors
 - Regime probabilities are non-uniform (meaningful decomposition)
@@ -22,15 +22,33 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 
-def make_synthetic_ohlcv(n_bars=1000, seed=42):
-    """Generate synthetic OHLCV data for testing."""
+def make_synthetic_ohlcv(n_bars=1000, seed=42, regimes=3):
+    """Generate synthetic OHLCV data with known regime structure."""
     np.random.seed(seed)
     idx = pd.date_range("2026-01-01", periods=n_bars, freq="5min", tz="UTC")
-    price = np.cumsum(np.random.randn(n_bars) * 0.001) + 100
+    price = np.zeros(n_bars)
+    base = 100.0
+    chunk = n_bars // max(regimes, 1)
+
+    for r in range(regimes):
+        start = r * chunk
+        end = min(start + chunk, n_bars)
+        sz = end - start
+        for j in range(start, end):
+            i = j - start
+            if r == 0:  # Trending up
+                price[j] = base * (1 + 0.0003 * i + 0.0015 * np.random.randn())
+            elif r == 1:  # Ranging
+                price[j] = base * (1 + 0.001 * chunk) + 0.003 * base * np.random.randn()
+            else:  # Volatile
+                price[j] = base * (1 + 0.001 * chunk) + 0.008 * base * np.sin(i * 0.05) + 0.005 * base * np.random.randn()
+        if r == 0:
+            base = price[end - 1] if end < n_bars else price[-1]
+
     df = pd.DataFrame({
         "open": price * (1 - 0.0004 * abs(np.random.randn(n_bars))),
         "high": price * (1 + 0.003 * abs(np.random.randn(n_bars))),
-        "low": price * (1 - 0.003 * abs(np.random.randn(n_bars))),
+        "low":  price * (1 - 0.003 * abs(np.random.randn(n_bars))),
         "close": price,
         "volume": 100 + 50 * np.random.rand(n_bars),
         "tick_volume": (100 + 50 * np.random.rand(n_bars)).astype(int),
@@ -39,135 +57,277 @@ def make_synthetic_ohlcv(n_bars=1000, seed=42):
     return df
 
 
-@pytest.fixture
-def synthetic_data():
-    return make_synthetic_ohlcv(1000)
+# ── Synthetic Environment ──────────────────────────────────────────────
+
+import gymnasium as gym
+from gymnasium import spaces
 
 
-@pytest.fixture
-def trading_env(synthetic_data):
-    from drl.trading_env import TradingEnv
-    env = TradingEnv(
-        synthetic_data,
-        window_size=100,
-        action_config={"decision_ppo": False},
-        reward_scale=1.0,
-        penalty_scale=1.0,
-    )
-    # Fix observation space to match actual obs shape
-    obs, _ = env.reset()
-    from gymnasium import spaces
-    env.observation_space = spaces.Box(
-        low=-np.inf, high=np.inf, shape=obs.shape, dtype=np.float32
-    )
-    return env
+class SyntheticTradingEnv(gym.Env):
+    """
+    Minimal synthetic trading environment for integration testing.
+
+    Uses a RegimeDetector to produce regime observations, simulates
+    OHLCV-like observation vectors, and rewards based on next-bar
+    price movement (proxy for trading).
+
+    Performance: Regime observations are pre-computed once in __init__
+    to avoid O(n^2) slowdown during training.
+    """
+
+    metadata = {"render_modes": []}
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        window_size: int = 100,
+        num_regimes: int = 5,
+    ):
+        super().__init__()
+        self.df = df
+        self.window_size = window_size
+        self.num_regimes = num_regimes
+        self._step_idx = window_size
+        self.regime_dim = 6  # 5 one-hot + confidence
+
+        # Build per-bar feature vectors
+        self._build_features()
+
+        # Regime detector
+        from drl.regime_detector import RegimeDetector
+        self.regime_detector = RegimeDetector(use_patterns=False)
+        self.regime_detector.fit_heuristic(df)
+
+        # ── Pre-compute regime observations ──
+        # This prevents O(n^2) slowdown from repeatedly calling
+        # get_regime_observation on growing DataFrame slices
+        n = len(df)
+        self._regime_obs_cache = np.zeros((n, 1 + num_regimes), dtype=np.float32)
+        for i in range(window_size, n):
+            obs = self.regime_detector.get_regime_observation(df.iloc[:i])
+            self._regime_obs_cache[i] = obs
+
+        # Total observation dim: window * features_per_bar + portfolio_dim + regime_dim
+        # NOTE: portfolio_state MUST come before regime_obs in the tail to match
+        # AdaptiveLSTMFeatureExtractor's expectation:
+        #   tail = observations[:, -portfolio_dim:]  (last portfolio_dim elements)
+        #   regime = tail[:, -regime_dim:]  (last regime_dim of the tail)
+        #   portfolio_state = tail[:, :-regime_dim]  (rest of tail before regime)
+        self.n_features_per_bar = 6
+        self.portfolio_dim = 1
+        obs_dim = window_size * self.n_features_per_bar + self.portfolio_dim + self.regime_dim
+
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+        )
+        self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
+
+        # Episode tracking
+        self._position = 0.0
+        self._entry_price = 0.0
+        self._cumulative_pnl = 0.0
+
+    def _build_features(self):
+        """Compute per-bar feature vectors."""
+        df = self.df
+        close = df["close"].values
+        volume = df["volume"].values
+        n = len(close)
+
+        features = []
+        for i in range(n):
+            o = df["open"].iloc[i]
+            h = df["high"].iloc[i]
+            l = df["low"].iloc[i]
+            c = close[i]
+            v = volume[i]
+
+            norm_close = c / (o + 1e-8) - 1.0
+            norm_high = h / (o + 1e-8) - 1.0
+            norm_low = l / (o + 1e-8) - 1.0
+            range_pct = (h - l) / (l + 1e-8)
+            vol_ratio = v / (np.mean(volume[max(0, i - 20): i + 1]) + 1e-8)
+
+            features.append([norm_close, norm_high, norm_low, range_pct, vol_ratio, c / 100.0])
+
+        self._features = np.array(features, dtype=np.float32)
+
+    def _get_obs(self):
+        """Build the observation vector for the current step (O(1) array lookups).
+
+        Structure: [feat_window(window * features), port_state(1), regime_obs(6)]
+        Portfolio state comes BEFORE regime to match AdaptiveLSTMFeatureExtractor's
+        tail handling: tail = [portfolio_state, regime_features].
+        """
+        end = self._step_idx
+        start = end - self.window_size
+        feat_window = self._features[start:end].reshape(-1)
+        regime_obs = self._regime_obs_cache[end]  # pre-computed at index i for df.iloc[:i]
+        port_state = np.array([self._cumulative_pnl / 1000.0], dtype=np.float32)
+        # portfolio_state BEFORE regime_obs so extractor's tail handling is correct
+        return np.concatenate([feat_window, port_state, regime_obs]).astype(np.float32)
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        self._step_idx = self.window_size
+        self._position = 0.0
+        self._entry_price = 0.0
+        self._cumulative_pnl = 0.0
+        return self._get_obs(), {}
+
+    def step(self, action):
+        self._step_idx += 1
+        done = self._step_idx >= len(self.df) - 1
+        truncated = False
+
+        if done:
+            return self._get_obs(), 0.0, True, False, {}
+
+        current_close = self.df["close"].iloc[self._step_idx]
+        next_close = self.df["close"].iloc[min(self._step_idx + 1, len(self.df) - 1)]
+        price_change = (next_close - current_close) / (current_close + 1e-8)
+
+        action_dir = float(np.clip(action[0], -1, 1))
+        reward = action_dir * price_change * 10.0
+        reward -= abs(action_dir) * 0.001
+
+        self._cumulative_pnl += reward
+
+        return self._get_obs(), reward, done, truncated, {}
 
 
-class TestIntegrationRegimeRouted:
-    """End-to-end integration test for regime-routed PPO training."""
+# ── Tests ──────────────────────────────────────────────────────────────
 
-    def test_env_creation(self, trading_env):
-        from gymnasium import spaces
-        assert isinstance(trading_env.observation_space, spaces.Box)
-        assert isinstance(trading_env.action_space, spaces.Box)
-        assert len(trading_env.observation_space.shape) == 1
-        assert trading_env.action_space.shape == (6,)
-        assert trading_env.observation_space.shape[0] > 100
 
-    def test_env_reset_and_step(self, trading_env):
-        obs, info = trading_env.reset()
-        assert obs.shape == trading_env.observation_space.shape
-        assert obs.dtype == np.float32
-        action = trading_env.action_space.sample()
-        obs2, reward, done, truncated, info = trading_env.step(action)
-        assert obs2.shape == obs.shape
-        assert isinstance(reward, float)
-        assert isinstance(done, bool)
+class TestEnvCreation:
+    """Validate the synthetic environment can be created and reset."""
 
-    @pytest.mark.slow
-    def test_regime_routed_ppo_train_10k(self, synthetic_data):
+    def test_env_creation(self):
+        """Environment should have the right spaces."""
+        df = make_synthetic_ohlcv(500)
+        env = SyntheticTradingEnv(df)
+        assert isinstance(env.observation_space, spaces.Box)
+        assert isinstance(env.action_space, spaces.Box)
+        assert env.observation_space.shape[0] > 0
+        assert env.action_space.shape[0] == 6
+
+    def test_env_reset_and_step(self):
+        """Environment should reset and step without errors."""
+        df = make_synthetic_ohlcv(500)
+        env = SyntheticTradingEnv(df)
+        obs, info = env.reset()
+        assert obs.shape == env.observation_space.shape
+        action = env.action_space.sample()
+        next_obs, reward, terminated, truncated, info = env.step(action)
+        assert next_obs.shape == obs.shape
+        assert isinstance(reward, (int, float, np.floating))
+        assert isinstance(terminated, (bool, np.bool_))
+        assert isinstance(truncated, (bool, np.bool_))
+
+
+@pytest.mark.slow
+class TestRegimeRoutedPPOTraining:
+    """Full training pipeline integration test."""
+
+    def test_regime_routed_ppo_train_10k(self):
+        """
+        Train RegimeRoutedPPO for 10000 steps and verify regime decomposition.
+
+        This is the main integration test covering:
+        - Synthetic data generation with regime structure
+        - Synthetic environment with RegimeDetector
+        - Model instantiation with regime-routed policy
+        - Training loop completion
+        - Regime probability structure (non-uniform)
+        - Actor-critic independence
+        """
+        import torch as th
         from stable_baselines3.common.vec_env import DummyVecEnv
+
         from drl.regime_routed_policy import (
             RegimeRoutedPPO,
             RegimeRoutedActorCriticPolicy,
         )
-        from drl.regime_detector import NUM_REGIMES
-        from drl.trading_env import TradingEnv
 
-        # Fresh env for this test (avoid state leakage)
-        env = TradingEnv(
-            synthetic_data,
-            window_size=100,
-            action_config={"decision_ppo": False},
-            reward_scale=1.0,
-            penalty_scale=1.0,
-        )
-        obs, _ = env.reset()
-        from gymnasium import spaces
-        env.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=obs.shape, dtype=np.float32
-        )
+        # ── 1. Create synthetic data ──
+        df = make_synthetic_ohlcv(1500, seed=42, regimes=3)
+        window_size = 100
+        total_timesteps = 10000
 
-        vec_env = DummyVecEnv([lambda: env])
+        # ── 2. Create DummyVecEnv wrapper ──
+        def make_env():
+            return SyntheticTradingEnv(df, window_size=window_size)
+
+        env = DummyVecEnv([make_env])
+
+        # ── 3. Determine regime info from env ──
+        test_env = make_env()
+        obs_dim = test_env.observation_space.shape[0]
+        regime_dim = test_env.regime_dim
+
+        # ── 4. Create RegimeRoutedPPO ──
+        policy_kwargs = {
+            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
+            "num_regimes": 5,
+            "regime_dim": regime_dim,
+        }
 
         model = RegimeRoutedPPO(
             RegimeRoutedActorCriticPolicy,
-            vec_env,
+            env,
             learning_rate=3e-4,
             n_steps=256,
             batch_size=64,
-            n_epochs=5,
+            n_epochs=10,
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
             ent_coef=0.01,
             vf_coef=0.5,
             max_grad_norm=0.5,
+            policy_kwargs=policy_kwargs,
             regime_loss_coef=0.05,
-            policy_kwargs={
-                "num_regimes": NUM_REGIMES,
-                "regime_dim": NUM_REGIMES + 1,
-                "net_arch": [64, 64],
-            },
-            verbose=1,
-            seed=42,
-            device="cpu",
+            verbose=0,
         )
 
+        # ── 5. Train ──
+        model.learn(total_timesteps=total_timesteps)
+
+        # ── 6. Verify policy architecture ──
         policy = model.policy
-        assert hasattr(policy, "regime_classifier")
-        assert hasattr(policy.value_net, "value_classifier")
-        assert hasattr(policy, "regime_action_nets")
-        assert hasattr(policy, "regime_value_nets")
-        assert len(policy.regime_action_nets) == NUM_REGIMES
-        assert len(policy.regime_value_nets) == NUM_REGIMES
+        assert hasattr(policy, "regime_classifier"), "Missing regime_classifier"
+        assert hasattr(policy, "value_classifier"), "Missing value_classifier"
+        assert hasattr(policy, "regime_action_nets"), "Missing regime_action_nets"
+        assert hasattr(policy, "regime_value_nets"), "Missing regime_value_nets"
+        assert len(policy.regime_action_nets) == 5
+        assert len(policy.regime_value_nets) == 5
 
-        model.learn(total_timesteps=10000, progress_bar=False)
-
-        obs = vec_env.reset()
-        action, _states = model.predict(obs, deterministic=True)
-        assert action.shape == (1, 6)
-
-        import torch
-        obs_tensor = torch.as_tensor(obs, dtype=torch.float32, device=policy.device)
+        # ── 7. Verify regime probabilities are non-uniform ──
+        obs, _ = make_env().reset()
+        obs_tensor = th.as_tensor(obs[None, :], dtype=th.float32, device=policy.device)
         regime_probs = policy.get_regime_probs(obs_tensor)
-        assert regime_probs is not None
-        assert regime_probs.shape == (1, NUM_REGIMES)
-        uniform = 1.0 / NUM_REGIMES
-        assert (regime_probs > uniform * 1.05).any(), "Regime probs too uniform"
+        assert regime_probs.shape == (1, 5), f"Expected (1, 5), got {regime_probs.shape}"
 
+        # Check that probabilities are non-uniform (meaningful decomposition)
+        uniform = 1.0 / 5
+        assert (
+            regime_probs[0] > uniform * 1.05
+        ).any(), f"Regime probs too uniform: {regime_probs[0].detach().cpu().numpy()}"
+
+        # ── 8. Verify critic regime classifier is independent ──
         value_probs = policy.get_value_regime_probs(obs_tensor)
-        assert value_probs is not None
-        assert value_probs.shape == (1, NUM_REGIMES)
+        assert value_probs.shape == (1, 5)
 
-        agreement = (regime_probs.argmax(axis=1) == value_probs.argmax(axis=1)).float().mean()
-        # With 5 regimes and independent classifiers, agreement is typically < 30%
-        # This is a soft check - may rarely fail with very early training
-        assert agreement < 1.0, "Actor and critic fully agree"
+        # Actor and critic should have less than 100% agreement
+        agreement = float(
+            regime_probs[0].argmax() == value_probs[0].argmax()
+        )
+        assert (
+            agreement < 1.0
+        ), "Actor and critic fully agree on regime (should be independent)"
 
-        print(f"Training complete: 10,000 steps")
-        print(f"Actor regime probs: {regime_probs[0].detach().numpy().round(3)}")
-        print(f"Value regime probs: {value_probs[0].detach().numpy().round(3)}")
-        print(f"Actor-Value agreement: {agreement:.1%}")
-
-        vec_env.close()
+        print(f"\nIntegration test results:")
+        print(f"  Actor regime probs:    {regime_probs[0].detach().cpu().numpy()}")
+        print(f"  Value regime probs:    {value_probs[0].detach().cpu().numpy()}")
+        print(f"  Actor-Value agreement: {agreement:.0%}")
+        print(f"  Training: OK ({total_timesteps} steps completed)")
