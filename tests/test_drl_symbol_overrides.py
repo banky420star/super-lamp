@@ -44,7 +44,7 @@ def test_btc_symbol_training_options_override_global_reward_and_action():
     assert reward_weights["churn_penalty"] == 0.7
     assert reward_weights["neutral_collapse_penalty"] == 0.9
     assert action_cfg["min_target_abs"] == 0.015
-    assert feature_version == "engineered_v2"
+    assert feature_version == "ultimate_150"
 
 
 def test_decode_action_respects_lower_symbol_thresholds():
