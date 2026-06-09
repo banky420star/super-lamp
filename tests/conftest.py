@@ -37,3 +37,21 @@ logger.add = _test_safe_add
 
 # Add a stderr sink so test output is visible
 logger.add(sys.stderr, level="WARNING")
+
+
+# ── Prevent background threads during pytest ────────────────────────────────
+# HybridBrain._start_autonomy_if_enabled creates a daemon thread that
+# survives across test modules and causes segfaults when stale state
+# is accessed. Disable it globally before any test module is imported.
+# ───────────────────────────────────────────────────────────────────────────
+def pytest_configure(config):
+    """Disable autonomy loop and other background threads for all tests."""
+    os.environ["AGI_AUTONOMY_ENABLED"] = "false"
+
+    # Belt-and-suspenders: also patch HybridBrain to no-op the method
+    # (guards against codepaths that might bypass the env-var check)
+    try:
+        from Python.hybrid_brain import HybridBrain
+        HybridBrain._start_autonomy_if_enabled = lambda self: None
+    except (ImportError, AttributeError):
+        pass
