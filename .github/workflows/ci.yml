@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "experiment/**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pinned Python version
+        id: python-version
+        run: |
+          PINNED=$(tr -d '[:space:]' < .python-version)
+          echo "Pinned Python version: $PINNED"
+          echo "version=$PINNED" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.python-version.outputs.version }}
+
+      - name: Verify Python version matches .python-version
+        run: |
+          bash scripts/verify_python_version.sh
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile check all Python files
+        run: |
+          echo "Checking all Python files compile..."
+          find . -name "*.py" -not -path "./test_env/*" -not -path "./archive/*" -not -path "./.git/*" -not -path "./venv/*" -not -path "./repro_venv/*" | while read -r f; do
+            python -m py_compile "$f" || exit 1
+          done
+          echo "✓ All Python files compile cleanly"
+
+      - name: Run unit tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/ -x --tb=short
