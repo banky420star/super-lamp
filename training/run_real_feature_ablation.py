@@ -338,12 +338,21 @@ def make_env(
     rewards: np.ndarray,
     window_size: int = 100,
     regime_dim: int = 5,
+    turnover_penalty: float = 0.0,
+    concentration_penalty: float = 0.001,
 ) -> DummyVecEnv:
     """Create a DummyVecEnv that feeds real feature observations.
 
     The environment exposes pre-computed feature windows as observations
-    and uses the pre-computed reward signal. This isolates the feature
-    utilisation question from trading environment complexity.
+    and uses the pre-computed reward signal with penalties to discourage
+    all-in hold-forever behaviour:
+      - turnover_penalty: cost per unit of position change (discourages
+        large jumps, encourages gradual tactical adjustments)
+      - concentration_penalty: cost for holding extreme positions near ±1
+        (discourages hold-forever, encourages moderate sizing)
+
+    This isolates the feature utilisation question from trading
+    environment complexity.
     """
     n_bars = feature_matrix.shape[0]
     n_features = feature_matrix.shape[1]
@@ -361,10 +370,12 @@ def make_env(
                 self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
                 self._step = window_size
                 self._max_step = n_bars - 1
+                self._last_position = 0.0
 
             def reset(self, seed=None, options=None):
                 super().reset(seed=seed)
                 self._step = window_size
+                self._last_position = 0.0
                 # Return first observation
                 obs = self._get_obs(self._step)
                 return obs, {}
@@ -377,7 +388,16 @@ def make_env(
                     return obs, 0.0, True, False, {}
 
                 obs = self._get_obs(self._step)
-                reward = float(rewards[self._step])
+                raw_reward = float(rewards[self._step])
+
+                # ── Position-aware penalties ──
+                position = float(action[0])  # first action dim = position size
+                position_change = abs(position - self._last_position)
+                turnover_cost = turnover_penalty * position_change
+                concentration_cost = concentration_penalty * (position ** 2)
+                self._last_position = position
+
+                reward = raw_reward - turnover_cost - concentration_cost
                 return obs, reward, False, False, {}
 
             def _get_obs(self, idx: int) -> np.ndarray:
@@ -680,6 +700,7 @@ def _evaluate(
             "flat_pct": 0.0,
             "action_abs_mean": 0.0,
             "action_entropy": 0.0,
+            "turnover_pct": 0.0,
         }
 
     n_features = feature_matrix.shape[1]
@@ -778,6 +799,9 @@ def _evaluate(
         # Zero means all positions fall in one bucket (policy stuck/saturated).
         # High entropy means the policy is exploring diverse position sizes.
         "action_entropy": _action_distribution_entropy(positions),
+        # Turnover — fraction of steps where position changed significantly.
+        # Low turnover with low entropy = hold-forever. High turnover = tactical.
+        "turnover_pct": round(float(np.mean(position_changes > 0.01)), 6),
     }
 
 
@@ -1038,8 +1062,8 @@ def main():
 
         # ── Position distribution summary ──
         print(f"\n[POSITIONS] Per-group position distribution:")
-        print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10} {'Entropy':<10}")
-        print(f"  {'-'*113}")
+        print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10} {'Entropy':<10} {'Turn%':<8}")
+        print(f"  {'-'*121}")
         for r in completed:
             pm = r.get("position_mean", 0)
             ps = r.get("position_std", 0)
@@ -1050,7 +1074,8 @@ def main():
             fp = r.get("flat_pct", 0)
             am = r.get("action_abs_mean", 0)
             ent = r.get("action_entropy", 0)
-            print(f"  {r['ablation_group']:<20} {pm:<10.4f} {ps:<10.4f} {pmin:<10.4f} {pmax:<10.4f} {lp:<8.1%} {sp:<8.1%} {fp:<8.1%} {am:<10.4f} {ent:<10.4f}")
+            to = r.get("turnover_pct", 0)
+            print(f"  {r['ablation_group']:<20} {pm:<10.4f} {ps:<10.4f} {pmin:<10.4f} {pmax:<10.4f} {lp:<8.1%} {sp:<8.1%} {fp:<8.1%} {am:<10.4f} {ent:<10.4f} {to:<8.1%}")
 
         # Best performer by Sharpe
         best = max(completed, key=lambda r: r.get("sharpe_ratio", -999))
