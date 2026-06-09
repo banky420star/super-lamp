@@ -334,18 +334,19 @@ class TradingEnv(gym.Env):
         # reward_weights["cost_penalty"] still wins (highest priority for tests).
         _cost_pen_default = float(os.environ.get("AGI_COST_PENALTY", "2.0"))
         self.reward_weights = {
-            "growth": float(w.get("growth", 40.0)),
+            "growth": float(w.get("growth", 20.0)),
             "payoff": float(w.get("payoff", 5.0)),
             "sharpe_bonus": float(w.get("sharpe_bonus", 1.0)),
-            "drawdown_penalty": float(w.get("drawdown_penalty", 5.0)),  # ALIGNMENT: raised from 3.0 per audit (stronger live DD control)
+            "drawdown_penalty": float(w.get("drawdown_penalty", 10.0)),  # ALIGNMENT: raised from 3.0 per audit (stronger live DD control)
             "cost_penalty": float(w.get("cost_penalty", _cost_pen_default)),
             "churn_penalty": float(w.get("churn_penalty", 0.5)),
             "memory_expectancy_bonus": float(w.get("memory_expectancy_bonus", 0.5)),
             "loss_streak_penalty": float(w.get("loss_streak_penalty", 0.4)),
             "directional_followthrough": float(w.get("directional_followthrough", 0.0)),
             "actionable_target_bonus": float(w.get("actionable_target_bonus", 0.0)),
-            "neutral_collapse_penalty": float(w.get("neutral_collapse_penalty", 0.0)),
+            "neutral_collapse_penalty": float(w.get("neutral_collapse_penalty", 1.0)),
             "hold_penalty": float(w.get("hold_penalty", 1.0)),
+            "concentration_penalty": float(w.get("concentration_penalty", 2.0)),
         }
 
         # NEW: Reward Scale & Signal Improvement - env flags + profile for v5/v6 launcher flexibility
@@ -1192,7 +1193,7 @@ class TradingEnv(gym.Env):
         win_streak_bonus = self._trade_metrics.get("win_streak_bonus", 0.0)
         combo_multiplier = getattr(self, "_combo_multiplier", 1.0)  # persistent across steps, decays by 0.5 when not profitable
         # Position-scaling bonus: rewards taking larger positions on a winning streak
-        position_scaling_bonus = getattr(self, "_win_streak", 0) * 0.1 * abs(self.position)
+        position_scaling_bonus = min(getattr(self, "_win_streak", 0) * 0.1 * abs(self.position), 0.5)
         # Multiplier & streak decay: both decrease per step not in a profitable trade
         if abs(self.position) > 0 and step_ret > 0:
             pass  # profitable step, hold combo and streak
@@ -1211,18 +1212,29 @@ class TradingEnv(gym.Env):
             + position_scaling_bonus
             + account_doubling_bonus
         ) * combo_multiplier  # combo meter amplifies all bonuses
+        # Overconcentration penalty: penalizes >50% one-sided exposure
+        max_concentration = 0.5  # max 50% in one direction
+        concentration_penalty = max(0.0, abs(self.position) - max_concentration)
+        
         # Hold time penalty: ramps quadratically after HOLD_PENALTY_AFTER_BARS
         steps_over = max(0, self.steps_held - HOLD_PENALTY_AFTER_BARS)
         hold_time_penalty = steps_over * steps_over * HOLD_PENALTY_COEFF  # quadratic ramp
+        
+        # Flat-persistence penalty: increasing cost for staying idle (anti-HOLD-collapse)
+        hold_persist_penalty = 0.0
+        if abs(self.position) < 1e-6 and abs(delta) < 1e-6:
+            hold_persist_penalty = min(0.002 * float(self.steps_held), 0.05)
 
         penalty_contrib = (
             rw["drawdown_penalty"] * dd_base
             + rw["cost_penalty"] * cost_penalty
             + rw["churn_penalty"] * churn_penalty
             + loss_streak_penalty
+            + hold_persist_penalty  # flat-idle cost (anti-HOLD-collapse)
             + rw["neutral_collapse_penalty"] * neutral_collapse_penalty
                         + quad_loss  # quadratic loss amplification (scaled by penalty_scale below)
             + rw["hold_penalty"] * hold_time_penalty  # hold time penalty (ramps over time)
+            + rw["concentration_penalty"] * concentration_penalty  # overconcentration (>50% one-sided)
         )
         shaped_reward = bonus_contrib - (self.penalty_scale * penalty_contrib)
 
