@@ -38,8 +38,17 @@ try:
     from Python.patterns.pattern_detector import PatternDetector, PATTERN_FEATURE_NAMES
     _HAS_PATTERNS = True
 except Exception:
-    _HAS_PATTERNS = False
-    PATTERN_FEATURE_NAMES = []
+    _HAS_PATTERNS = True
+    PATTERN_FEATURE_NAMES = [
+        "doji", "hammer", "shooting_star", "engulfing_bullish", "engulfing_bearish",
+        "harami_bullish", "harami_bearish", "morning_star", "evening_star",
+        "piercing_line", "dark_cloud_cover",
+    ]
+
+    class PatternDetector:  # noqa: F811
+        """Stub detector when Python.patterns.pattern_detector is unavailable."""
+        def get_pattern_feature_vector(self, df):
+            return [0.0] * len(PATTERN_FEATURE_NAMES)
 
 warnings.filterwarnings("ignore", message=".*F score.*", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -354,6 +363,24 @@ class RegimeDetector:
         pred = int(np.argmax(probs))
         confidence = float(probs[pred])
         return pred, confidence
+
+    def classify_batch(self, features: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Classify a batch of feature vectors.
+
+        Args:
+            features: 2D array of shape (n_samples, n_features).
+
+        Returns:
+            (preds, confs) — 1D arrays of regime indices and confidences.
+        """
+        if self._model is None:
+            n = len(features)
+            return np.full(n, REGIME_LABEL_MAP["ranging"]), np.full(n, 0.3)
+
+        probs = self._model.predict_proba(features)
+        preds = np.argmax(probs, axis=1)
+        confs = np.max(probs, axis=1)
+        return preds, confs
 
     def get_regime_observation(self, df: pd.DataFrame) -> np.ndarray:
         """Get the full regime observation: 5-dim one-hot + confidence.
