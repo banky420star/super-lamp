@@ -123,6 +123,7 @@ def _action_distribution_entropy(positions: np.ndarray, n_bins: int = 5) -> floa
 def load_real_data(
     symbol: str = "XAUUSDm",
     n_bars: int = 5000,
+    seed: int = 42,
 ) -> pd.DataFrame:
     """Load real OHLCV data for the given symbol.
 
@@ -158,7 +159,7 @@ def load_real_data(
 
     # Last resort: synthetic data spanning a realistic price range
     print("  WARNING: Using synthetic data — results will not reflect real market structure")
-    np.random.seed(42)
+    np.random.seed(seed)
     idx = pd.date_range("2026-01-01", periods=n_bars, freq="5min", tz="UTC")
     price = 100.0 * np.exp(np.cumsum(np.random.randn(n_bars) * 0.0005))
     df = pd.DataFrame({
@@ -391,6 +392,7 @@ def run_trial(
     close_prices: np.ndarray,
     trial_id: int = 0,
     verbose: bool = False,
+    seed: int = 42,
 ) -> dict:
     """Run a single training trial with a given feature ablation.
 
@@ -424,6 +426,7 @@ def run_trial(
         window_size=window_size,
         regime_dim=regime_dim,
     )
+    env.seed(seed)
 
     # Build policy kwargs — use AdaptiveLSTMFeatureExtractor to match real training pipeline
     use_regime = regime_dim > 0
@@ -812,7 +815,23 @@ def main():
         action="store_true",
         help="Print detailed progress",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (default: 42)",
+    )
     args = parser.parse_args()
+
+    # Set seeds for reproducibility
+    np.random.seed(args.seed)
+    import random
+    random.seed(args.seed)
+    try:
+        import torch
+        torch.manual_seed(args.seed)
+    except ImportError:
+        pass
 
     groups = args.groups or ABLATION_GROUPS
 
@@ -829,7 +848,7 @@ def main():
 
     # ── Load data ──
     print(f"\nLoading real data for {args.symbol}...")
-    df = load_real_data(symbol=args.symbol, n_bars=args.n_bars)
+    df = load_real_data(symbol=args.symbol, n_bars=args.n_bars, seed=args.seed)
     close_prices = df["close"].values.astype(np.float32)
     print(f"  Got {len(df)} bars of data")
 
@@ -960,6 +979,7 @@ def main():
                 close_prices=close_prices,
                 trial_id=trial,
                 verbose=args.verbose,
+                seed=args.seed,
             )
             all_results.append(result)
 
