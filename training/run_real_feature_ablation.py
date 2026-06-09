@@ -54,63 +54,13 @@ os.environ["SB3_VERBOSE"] = "0"
 # ── Feature Group Definitions (name-based, not index-based) ─────────────
 
 # ENGINEERED_V2 column order — single source of truth for column indices.
-# If the feature pipeline changes order, change this list, not the group specs.
-ENGINEERED_V2_COLUMNS = [
-    "open_rel", "high_rel", "low_rel", "close_rel",
-    "log_vol",
-    "log_ret1", "log_ret5", "log_ret20",
-    "body_ratio", "upper_wick", "lower_wick", "range_ratio",
-    "rv_20",
-    "rel_volume", "spread_est_bps",
-    "htf_trend", "vol_bucket",
-    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
-    "session_london", "session_ny", "major_open",
-    "news_prox", "news_soon", "session_overlap",
-    "mins_since_london", "news_avoid",
-    *[f"pattern_{i}" for i in range(11)],
-    *[f"cross_asset_{i}" for i in range(18)],
-    "ml_signal",
-]
+# Imported from Python.feature_registry — single source of truth
+from Python.feature_registry import (
+    ENGINEERED_V2_COLUMNS, FEATURE_GROUPS_BY_NAME, FEATURE_GROUPS,
+    PAUSED_GROUPS, ABLATION_GROUPS,
+)
 
-# Feature groups defined by column NAME, not index.
-# Indices are derived automatically from ENGINEERED_V2_COLUMNS.
-#
-# NOTE: 'pattern' group removed — Python/patterns/pattern_detector.py does not
-# exist, so pattern columns 29-39 are always zero.
-# NOTE: 'cross_asset' narrowed to 6 live columns (USDJPYm only) — US10Y and DXY
-# are not available in MT5 market watch, so columns 46-57 are always zero.
-FEATURE_GROUPS_BY_NAME = {
-    "trend": ["htf_trend", "vol_bucket"],
-    "momentum": ["log_ret1", "log_ret5", "log_ret20"],
-    "volatility": ["rv_20"],
-    "volume": ["rel_volume", "spread_est_bps"],
-    "cross_asset": [f"cross_asset_{i}" for i in range(6)],  # only 6 live out of 18
-    "ml_signal": ["ml_signal"],
-}
 
-FEATURE_GROUPS = {
-    group: {
-        "indices": [ENGINEERED_V2_COLUMNS.index(name) for name in names],
-        "columns": names,
-        "description": ", ".join(names),
-    }
-    for group, names in FEATURE_GROUPS_BY_NAME.items()
-}
-
-# Groups tested in the ablation study
-ABLATION_GROUPS = [
-    "ALL",
-    "NO_TREND",
-    "NO_MOMENTUM",
-    "NO_TREND_MOMENTUM",
-    "NO_VOLATILITY",
-    "NO_VOLUME",
-    "NO_CROSS_ASSET",
-    "NO_ML_SIGNAL",
-    "NO_REGIME",
-    "TREND_MOMENTUM_FIRST",
-    "NO_BIAS_SATURATION",
-]
 
 # Feature set cardinality (derived from column name list)
 FULL_FEATURE_COUNT = len(ENGINEERED_V2_COLUMNS)
