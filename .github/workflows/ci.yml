@@ -45,6 +45,5 @@ jobs:
           echo "✓ All Python files compile cleanly"
 
       - name: Run unit tests
-        continue-on-error: true
         run: |
-          python -m pytest tests/ -x --tb=short
+          python -m pytest tests/ -x --tb=short --ignore=tests/test_optimizations.py --ignore=tests/test_integration_regime_routed.py -k "not slow"

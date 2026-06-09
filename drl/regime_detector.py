@@ -190,6 +190,75 @@ class RegimeDetector:
 
     # ── Public API ──────────────────────────────────────────────────
 
+    def compute_features_batch(self, df: pd.DataFrame) -> np.ndarray:
+        """Compute regime feature vectors for ALL bars.
+
+        Returns:
+            (n, self._feature_dim) float32 array.
+        """
+        _require_ohlcv(df)
+
+        close = df["close"].values.astype(float)
+        high = df["high"].values.astype(float)
+        low = df["low"].values.astype(float)
+        volume = df["volume"].values.astype(float) if "volume" in df.columns else np.ones_like(close)
+        n = len(close)
+        eps = 1e-8
+
+        # ── Compute regime indicators ──
+        atr = self._compute_atr(high, low, close, 14)
+        adx = _compute_adx(high, low, close, 14)
+
+        # BB width
+        ma20 = pd.Series(close).rolling(20, min_periods=1).mean().values
+        std20 = pd.Series(close).rolling(20, min_periods=1).std().fillna(0).values
+        bb_width = (4.0 * std20) / (ma20 + eps)
+
+        # ATR ratio
+        atr_ma = pd.Series(atr).rolling(50, min_periods=1).mean().fillna(atr.mean()).values
+        atr_ratio = atr / (atr_ma + eps)
+
+        # Volume relative
+        vol_ma20 = pd.Series(volume).rolling(20, min_periods=1).mean().fillna(volume.mean()).values
+        vol_rel = volume / (vol_ma20 + eps)
+
+        # MA slope (50-bar)
+        ma50 = pd.Series(close).rolling(50, min_periods=1).mean().values
+        ma_slope = np.zeros(n)
+        for i in range(20, n):
+            ma_slope[i] = (ma50[i] - ma50[i - 20]) / (ma50[i - 20] + eps)
+
+        # Price relative to MA50
+        price_rel_ma = close / (ma50 + eps) - 1.0
+
+        # ── Build per-bar features ──
+        base_feats = np.column_stack([
+            np.clip(adx / 100.0, 0, 1),
+            np.clip(atr_ratio, 0, 5),
+            np.clip(bb_width, 0, 5),
+            np.clip(vol_rel, 0, 10),
+            np.clip(ma_slope * 100, -1, 1),
+            np.clip(price_rel_ma, -1, 1),
+            (adx > 25) & (atr < atr_ma * 1.3),
+        ]).astype(np.float32)
+
+        # ── Pattern features per bar ──
+        if self.use_patterns and self._pattern_detector is not None:
+            pat_dim = len(PATTERN_FEATURE_NAMES)
+            pat_features = np.zeros((n, pat_dim), dtype=np.float32)
+            for i in range(n):
+                try:
+                    row_df = df.iloc[max(0, i - 5): i + 1].copy()
+                    pat_vec = self._pattern_detector.get_pattern_feature_vector(row_df)
+                    for j, v in enumerate(pat_vec):
+                        if j < pat_dim:
+                            pat_features[i, j] = float(v)
+                except Exception:
+                    pass
+            return np.column_stack([base_feats, pat_features]).astype(np.float32)
+
+        return base_feats
+
     def compute_features(self, df: pd.DataFrame) -> np.ndarray:
         """Compute regime feature vector for the latest bar.
 
