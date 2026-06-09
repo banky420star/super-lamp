@@ -465,7 +465,7 @@ def run_trial(
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
-            ent_coef=0.01,
+            ent_coef=0.05,
             vf_coef=0.5,
             max_grad_norm=0.5,
             policy_kwargs=policy_kwargs,
@@ -998,7 +998,7 @@ def main():
         # ── Position distribution summary ──
         print(f"\n[POSITIONS] Per-group position distribution:")
         print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10}")
-        print(f"  {'-'*90}")
+        print(f"  {'-'*94}")
         for r in completed:
             pm = r.get("position_mean", 0)
             ps = r.get("position_std", 0)

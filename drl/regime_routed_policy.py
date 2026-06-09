@@ -117,9 +117,12 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
             self.num_regimes,
         )
 
-        # Initialise
+        # Initialise — match SB3's standard action_net gain (0.01) so actions
+        # start near zero and the policy explores before saturating at ±1.
+        # Previous gain=5.0 caused instant hard-clipping to ±1 with zero gradient
+        # signal to recover, since the Gaussian mean → ±5 → clipped to ±1.
         for net in self.regime_action_nets:
-            nn.init.orthogonal_(net.weight, gain=5.0)
+            nn.init.orthogonal_(net.weight, gain=0.01)
             nn.init.zeros_(net.bias)
         nn.init.xavier_uniform_(self.regime_classifier.weight)
         nn.init.zeros_(self.regime_classifier.bias)
