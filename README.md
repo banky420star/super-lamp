@@ -12,6 +12,28 @@ The core question: *Which of our 59 engineered features drive performance, and w
 
 ---
 
+## Prerequisites
+
+**Python 3.14.5** — pinned in [`.python-version`](.python-version) for reproducible builds.
+
+If you use `pyenv`, the correct version is auto-selected when entering the project directory.
+
+### Setup
+
+```bash
+python -m venv venv
+venv/Scripts/activate   # Windows: venv\Scripts\activate; Unix: source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Verify:
+
+```bash
+python --version   # should print Python 3.14.5
+```
+
+---
+
 ## Architecture
 
 ```
