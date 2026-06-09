@@ -1,7 +1,7 @@
 ﻿{
     "note":  "periodic heartbeat + self-monitor",
-    "iteration":  3455,
-    "timestamp":  "2026-06-07T14:23:21.2850014Z",
+    "iteration":  5230,
+    "timestamp":  "2026-06-09T03:38:52.6688905Z",
     "watcher_auto_launched":  true,
     "next_full_cycle_recommended":  false,
     "last_training_recovery":  "2026-06-04T19:52:27.0428879+02:00",
@@ -15,7 +15,7 @@
     "supervisor_version":  "production_hardened_20260528",
     "mt5_running":  null,
     "healthy":  false,
-    "self_monitor_last_call":  "2026-06-07T14:23:21.2850014Z",
-    "last_candidate_state":  "YES (v4_robust post-fix clean fallback, age 13m, cand=20260607_160114)",
+    "self_monitor_last_call":  "2026-06-09T03:38:52.6688905Z",
+    "last_candidate_state":  "YES (v4_robust post-fix clean fallback, age 2185m, cand=20260607_170952)",
     "training_recovery_attempts":  3
 }

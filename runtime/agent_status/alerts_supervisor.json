@@ -1,11 +1,11 @@
 ﻿{
     "candidate_handoff_ready":  true,
-    "ts":  "2026-06-07T14:23:21.2850014Z",
+    "ts":  "2026-06-09T03:38:52.6688905Z",
     "supervisor_heartbeat_ok":  true,
     "meta_override_active":  true,
     "recent_recovery":  "Training recoveries: 3",
     "active_alerts":  {
-                          "last_check":  "2026-06-07T16:23:21.2850014+02:00",
+                          "last_check":  "2026-06-09T05:38:52.6688905+02:00",
                           "degraded":  true
                       }
 }
