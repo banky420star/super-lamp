@@ -7,7 +7,10 @@ holding consistency vs whipsawing.
 """
 from __future__ import annotations
 
-import os, sys, time, warnings, csv
+import os
+import sys
+import time
+import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -26,10 +29,12 @@ import matplotlib.dates as mdates
 from stable_baselines3 import PPO
 
 from drl.regime_routed_policy import RegimeRoutedPPO, RegimeRoutedActorCriticPolicy
+from drl.regime_detector import REGIME_LABELS
 from training.eval_harness import (
     fit_regime_detector,
     build_regime_observations,
     make_eval_env,
+    collect_positions,
     collect_metrics,
     REGIME_DIM,
 )
@@ -173,8 +178,9 @@ print(f"  Whipsaw ratio (NR/ALL): {nr_changes / max(all_changes, 1):.2f}x more c
 
 os.makedirs("logs", exist_ok=True)
 csv_path = "logs/position_metrics.csv"
+import csv as _csv
 with open(csv_path, "w", newline="") as f:
-    w = csv.writer(f)
+    w = _csv.writer(f)
     w.writerow(["model", "long_pct", "flat_pct", "short_pct", "changes",
                  "turnover", "reward", "win_rate", "sharpe"])
     for name, pos, chg, turn, rew, wr, sh in [

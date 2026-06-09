@@ -8,12 +8,14 @@ classifies every bar, and renders a two-panel figure:
   Bottom:     Confidence scatter coloured by regime
 
 Use this to visually verify that the detector's labels align with
-market structure (uptrends -> green, downtrends -> red, ranging -> gray,
-volatile -> orange, breakout -> purple).
+market structure (uptrends → green, downtrends → red, ranging → gray,
+volatile → orange, breakout → purple).
 """
 from __future__ import annotations
 
-import os, sys, warnings
+import os
+import sys
+import warnings
 from itertools import groupby
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -25,16 +27,17 @@ if PROJECT_ROOT not in sys.path:
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Patch
 
 from drl.regime_detector import REGIME_LABELS, NUM_REGIMES
-from training.eval_harness import fit_regime_detector
+from training.eval_harness import fit_regime_detector, build_regime_observations
 from Python.data_feed import fetch_training_data
 
-# -- Config -----------------------------------------------------------
+# ── Config ───────────────────────────────────────────────────────────
 
 SYMBOL = "XAUUSDm"
 PERIOD = "30d"
@@ -43,27 +46,27 @@ MIN_BARS = 100  # skip early bars where indicators haven't stabilised
 
 # Colour scheme (order matches REGIME_LABELS)
 REGIME_COLORS = ["#2ecc71", "#e74c3c", "#95a5a6", "#e67e22", "#9b59b6"]
-#  ^trending_up  ^trending_down ^ranging    ^volatile   ^breakout
+#  ↑trending_up  ↑trending_down ↑ranging    ↑volatile   ↑breakout
 REGIME_ALPHA = 0.18
 
-# -- Data -------------------------------------------------------------
+# ── Data ────────────────────────────────────────────────────────────
 
-print(f"Loading {SYMBOL} data...")
+print(f"Loading {SYMBOL} data…")
 df = fetch_training_data(
     SYMBOL, period=PERIOD, interval=INTERVAL, strict=False, require_fresh=False
 )
-print(f"  {len(df)} rows  {df.index[0]}  ->  {df.index[-1]}")
+print(f"  {len(df)} rows  {df.index[0]}  →  {df.index[-1]}")
 
-# -- Classify every bar -----------------------------------------------
+# ── Classify every bar ─────────────────────────────────────────────
 
-print("Fitting RegimeDetector...")
+print("Fitting RegimeDetector…")
 detector = fit_regime_detector(df)
 
 n = len(df)
 regime_idx = np.zeros(n, dtype=np.int32)
 confidence = np.zeros(n, dtype=np.float32)
 
-print("Classifying bars (70-bar rolling window)...")
+print("Classifying bars (70-bar rolling window)…")
 for i in range(70, n):
     lookback = df.iloc[max(0, i - 70) : i + 1]
     fv = detector.compute_features(lookback)
@@ -78,7 +81,7 @@ print("  Regime distribution:")
 for r, c in sorted(zip(uniq, cnts)):
     print(f"    {REGIME_LABELS[r]:<16} {c:>6}  ({c / (n - 70) * 100:.1f}%)")
 
-# -- Plot -------------------------------------------------------------
+# ── Plot ───────────────────────────────────────────────────────────
 
 fig, (ax1, ax2) = plt.subplots(
     2, 1, figsize=(20, 9), sharex=True,
@@ -88,9 +91,9 @@ fig, (ax1, ax2) = plt.subplots(
 times = df.index
 close = df["close"].values
 
-# -- Top panel: price + regime bands --
+# ── Top panel: price + regime bands ──
 
-# Group consecutive bars with the same regime -> far fewer axvspan calls
+# Group consecutive bars with the same regime → far fewer axvspan calls
 start = MIN_BARS
 groups: list[tuple[int, int, int]] = []  # (start_idx, end_idx, regime_id)
 for regime_id, grp in groupby(range(start, n), key=lambda i: int(regime_idx[i])):
@@ -105,7 +108,7 @@ for gs, ge, rid in groups:
 ax1.plot(times, close, color="#1a1a2e", linewidth=0.8, label=f"{SYMBOL} Close")
 ax1.set_ylabel("Price", fontsize=11)
 ax1.set_title(
-    f"Regime Detection Time Series - {SYMBOL} ({PERIOD} @ {INTERVAL})",
+    f"Regime Detection Time Series — {SYMBOL} ({PERIOD} @ {INTERVAL})",
     fontsize=13, fontweight="bold",
 )
 ax1.grid(True, alpha=0.3)
@@ -116,7 +119,7 @@ legend_handles = [
 ]
 ax1.legend(handles=legend_handles, loc="upper left", fontsize=9, title="Regime")
 
-# -- Bottom panel: confidence per regime --
+# ── Bottom panel: confidence per regime ──
 
 for r in range(NUM_REGIMES):
     mask = regime_idx == r

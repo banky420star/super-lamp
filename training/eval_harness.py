@@ -9,7 +9,6 @@ plot_position_timeseries.py:
   - make_eval_env: DummyVecEnv with action-contingent reward
   - collect_positions: deterministic eval returning positions array
   - collect_metrics: deterministic eval returning (positions, rewards) tuple
-  - plot_regime_action_distribution: 5-panel per-regime action bar chart
 """
 from __future__ import annotations
 
@@ -22,21 +21,10 @@ import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from drl.regime_detector import RegimeDetector, NUM_REGIMES
+from drl.regime_detector import RegimeDetector, REGIME_LABELS, NUM_REGIMES
 
 # One-hot (5) + confidence = 6
 REGIME_DIM = NUM_REGIMES + 1
-
-# Public API
-__all__ = [
-    "fit_regime_detector",
-    "build_regime_observations",
-    "make_eval_env",
-    "collect_positions",
-    "collect_metrics",
-    "plot_regime_action_distribution",
-    "REGIME_DIM",
-]
 
 # ── RegimeDetector fitting ─────────────────────────────────────────────
 
@@ -233,127 +221,3 @@ def collect_metrics(
         if done[0]:
             break
     return np.array(pos_list), np.array(rew_list)
-# ── Plotting ──────────────────────────────────────────────────────────────
-
-
-def plot_regime_action_distribution(
-    positions: np.ndarray,
-    regime_indices: np.ndarray,
-    regime_labels: list[str] | None = None,
-    num_regimes: int = NUM_REGIMES,
-    title: str = "Per-Regime Action Distribution",
-    save_path: str | None = "logs/regime_action_distribution.png",
-    dpi: int = 150,
-    verbose: bool = True,
-):
-    """Plot a 5-panel bar chart showing position distribution per regime.
-
-    Creates one bar panel per regime with three bars (Short, Flat, Long)
-    showing the count and percentage of steps in each position state.
-
-    Args:
-        positions: ``(n_steps,)`` array with values in {-1, 0, +1}.
-        regime_indices: ``(n_steps,)`` array of regime index (0--4).
-        regime_labels: List of ``num_regimes`` label strings.
-            Defaults to ``REGIME_LABELS`` from ``drl.regime_detector``.
-        num_regimes: Number of regime classes (default 5).
-        title: Figure super-title.
-        save_path: Path to save the PNG.  ``None`` disables saving.
-        dpi: Figure DPI.
-        verbose: If ``True``, print a textual summary table to stdout.
-
-    Returns:
-        The matplotlib ``Figure`` object (already saved to *save_path* if set).
-    """
-    import matplotlib.pyplot as plt
-
-    if regime_labels is None:
-        regime_labels = REGIME_LABELS
-
-    fig, axes = plt.subplots(1, num_regimes, figsize=(18, 4), sharey=True)
-
-    colors_short = "#e74c3c"
-    colors_flat = "#95a5a6"
-    colors_long = "#2ecc71"
-
-    for r in range(num_regimes):
-        ax = axes[r]
-        mask = regime_indices == r
-        pos_r = positions[mask]
-        n_r = len(pos_r)
-
-        if n_r == 0:
-            ax.text(
-                0.5, 0.5, "No steps",
-                ha="center", va="center",
-                transform=ax.transAxes, fontsize=11, color="gray",
-            )
-            ax.set_title(f"{regime_labels[r]}\n(0 steps)", fontsize=10)
-            ax.set_xticks([0, 1, 2])
-            ax.set_xticklabels(["Short", "Flat", "Long"])
-            continue
-
-        n_short = int((pos_r == -1).sum())
-        n_flat = int((pos_r == 0).sum())
-        n_long = int((pos_r == 1).sum())
-
-        bars = ax.bar(
-            ["Short (-1)", "Flat (0)", "Long (+1)"],
-            [n_short, n_flat, n_long],
-            color=[colors_short, colors_flat, colors_long],
-            edgecolor="white",
-            linewidth=0.8,
-        )
-
-        for bar, count in zip(bars, [n_short, n_flat, n_long]):
-            pct = count / n_r * 100
-            if pct > 0:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + max(1, n_r * 0.01),
-                    f"{pct:.1f}%",
-                    ha="center", va="bottom",
-                    fontsize=9, fontweight="bold",
-                )
-
-        ax.set_title(
-            f"{regime_labels[r]}\n({n_r} steps)",
-            fontsize=10, fontweight="bold",
-        )
-        ax.set_ylim(0, max(n_short, n_flat, n_long) * 1.25)
-        ax.tick_params(axis="x", labelsize=8)
-
-    axes[0].set_ylabel("Step count", fontsize=10)
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=1.02)
-    plt.tight_layout()
-
-    if save_path:
-        import os as _os
-        _os.makedirs(_os.path.dirname(save_path) or ".", exist_ok=True)
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-        if verbose:
-            print(f"Saved: {save_path}")
-
-    if verbose:
-        print()
-        print("=" * 60)
-        print("  Per-Regime Action Distribution Summary")
-        print("=" * 60)
-        print(f"  {'Regime':<16} {'Steps':>6} {'Short%':>8} {'Flat%':>8} {'Long%':>8}")
-        print("  " + "-" * 46)
-        for r in range(num_regimes):
-            mask = regime_indices == r
-            n = mask.sum()
-            if n > 0:
-                short_pct = (positions[mask] == -1).mean() * 100
-                flat_pct = (positions[mask] == 0).mean() * 100
-                long_pct = (positions[mask] == 1).mean() * 100
-            else:
-                short_pct = flat_pct = long_pct = 0.0
-            print(
-                f"  {regime_labels[r]:<16} {n:>6} "
-                f"{short_pct:>7.1f}% {flat_pct:>7.1f}% {long_pct:>7.1f}%"
-            )
-        print()
-
-    return fig

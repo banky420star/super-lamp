@@ -40,7 +40,6 @@ import torch as th
 from gymnasium import spaces
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from stable_baselines3.common.torch_layers import FlattenExtractor
 from drl.regime_routed_policy import RegimeRoutedPPO, RegimeRoutedActorCriticPolicy
 
 # Disable SB3 warnings
@@ -130,24 +129,20 @@ def make_synthetic_features(
     df: pd.DataFrame,
     window_size: int = 100,
     ablation_group: Optional[str] = None,
-    regime_dim: int = 6,
-) -> tuple[np.ndarray, int, np.ndarray]:
-    """Create synthetic observation vectors from OHLCV data with regime features.
+) -> tuple[np.ndarray, int]:
+    """Create synthetic observation vectors from OHLCV data.
 
     Simulates the feature pipeline by computing bar-level features from
-    OHLCV, then optionally ablating a feature group. Regime features
-    (one-hot encoded regime labels) are appended to each observation.
+    OHLCV, then optionally ablating a feature group.
 
     Args:
         df: OHLCV DataFrame.
         window_size: Number of bars per observation window.
         ablation_group: Feature group to ablate (set to zero), or None for all features.
-        regime_dim: Number of regime feature dimensions (default 6: 5 one-hot + confidence).
 
     Returns:
-        (observations, n_features_per_bar, regime_features) tuple.
-        observations: (n_windows, window_size * n_features_per_bar + regime_dim) array.
-        regime_features: (n_windows, regime_dim) array with one-hot regime labels.
+        (observations, n_features_per_bar) tuple.
+        observations: (n_windows, window_size * n_features_per_bar) array.
     """
     close = df["close"].values
     high = df["high"].values
@@ -216,7 +211,7 @@ def make_synthetic_features(
         vol_ma10 = np.mean(volume[max(0, i - 10): i + 1])
         feats.append(vol_i / (vol_ma10 + 1e-8))  # 13: Volume ratio
         feats.append(vol_i / (np.mean(volume[max(0, i - 50): i + 1]) + 1e-8))  # 14: Volume vs long MA
-        tick_vol = float(df["tick_volume"].iloc[i]) if "tick_volume" in df.columns else float(volume[i])
+        tick_vol = df.get("tick_volume", volume)[i]
         feats.append(tick_vol / (vol_i + 1e-8))  # 15: Tick volume ratio
         feats.append((vol_i - vol_ma10) / (vol_ma10 + 1e-8))  # 16: Volume delta
 
@@ -255,76 +250,25 @@ def make_synthetic_features(
         obs_list.append(window.reshape(-1))     # flatten
 
     observations = np.array(obs_list, dtype=np.float32)
-    # Compute regime features from OHLCV data
-    close_prices = df["close"].values
-    high_prices = df["high"].values
-    low_prices = df["low"].values
-
-    # Compute ATR as rolling mean of bar ranges
-    bar_ranges = high_prices - low_prices
-    atr = np.array([np.mean(bar_ranges[max(0, i-13):i+1]) for i in range(n)])
-    stable_atr = np.mean(atr[100:]) if n > 100 else np.mean(atr)
-
-    # Compute moving averages for trend detection
-    sma20_vals = np.array([np.mean(close_prices[max(0, i-19):i+1]) for i in range(n)])
-    sma50_vals = np.array([np.mean(close_prices[max(0, i-49):i+1]) for i in range(n)])
-
-    num_regime_classes = regime_dim - 1  # last dim is confidence
-    regime_labels = np.zeros(n, dtype=np.int64)
-    for i in range(n):
-        if i < 50 or stable_atr == 0:
-            regime_labels[i] = 0  # warmup / unknown
-        elif atr[i] > stable_atr * 1.3:
-            regime_labels[i] = 1 if sma20_vals[i] > sma50_vals[i] else 2  # high vol bull/bear
-        elif sma20_vals[i] > sma50_vals[i] * 1.005:
-            regime_labels[i] = 3  # trending up
-        elif sma20_vals[i] < sma50_vals[i] * 0.995:
-            regime_labels[i] = 4  # trending down
-        else:
-            regime_labels[i] = 0  # ranging / neutral
-
-    # Ensure regime labels are within range
-    regime_labels = np.clip(regime_labels, 0, num_regime_classes - 1)
-
-    confidence_val = 0.99
-
-    # Build one-hot regime features for each window
-    # Must match observations windowing: for i in range(window_size, n)
-    regime_feats_list = []
-    for i in range(window_size, n):
-        regime = regime_labels[i - 1]
-        onehot = np.zeros(num_regime_classes, dtype=np.float32)
-        onehot[regime] = 1.0
-        regime_feat = np.concatenate([onehot, np.array([confidence_val], dtype=np.float32)])
-        regime_feats_list.append(regime_feat)
-
-    regime_features = np.array(regime_feats_list, dtype=np.float32)  # (n_windows, regime_dim)
-
-    # Append regime features to observations
-    observations = np.concatenate([observations, regime_features], axis=1)
-
-    return observations, n_features, regime_features
+    return observations, n_features
 
 
 # ── Training Runner ────────────────────────────────────────────────────
 
-def make_env(obs: np.ndarray, window_size: int = 100, df: "pd.DataFrame" = None) -> DummyVecEnv:
+def make_env(obs: np.ndarray, window_size: int = 100) -> DummyVecEnv:
     """
     Create a DummyVecEnv that feeds pre-computed observations.
 
-    Args:
-        obs: Pre-computed observation array (n_windows, obs_dim).
-        window_size: Number of bars per observation window.
-        df: Optional OHLCV DataFrame for action-contingent reward.
-            If provided, reward = position * return - spread * |position_change|.
-            If None, falls back to state-only reward for backward compat.
+    This replaces the full TradingEnv for ablation testing so we can
+    focus on the feature utilisation question without env complexity.
     """
+    index = [0]
 
     def _init() -> object:
         import numpy as np
 
         obs_dim = obs.shape[1]
-        close_prices = df["close"].values if df is not None else None
+        portfolio_dim = 0  # No portfolio state for synthetic data
 
         class _SimpleEnv(gym.Env):
             metadata = {"render_modes": []}
@@ -332,40 +276,31 @@ def make_env(obs: np.ndarray, window_size: int = 100, df: "pd.DataFrame" = None)
             def __init__(self):
                 super().__init__()
                 self.observation_space = spaces.Box(
-                    low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+                    low=-np.inf, high=np.inf, shape=(obs_dim + portfolio_dim,), dtype=np.float32
                 )
                 self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
                 self._step = window_size
-                self._last_position = 0.0
-                self._close = close_prices
 
             def reset(self, seed=None, options=None):
                 super().reset(seed=seed)
                 self._step = window_size
-                self._last_position = 0.0
                 return obs[self._step - window_size].copy(), {}
 
             def step(self, action):
                 self._step += 1
                 idx = self._step
                 if idx >= len(obs):
-                    self._last_position = 0.0
                     return obs[-1].copy(), 0.0, True, False, {}
 
                 state = obs[idx].copy()
-                if self._close is not None and idx > 0 and idx < len(self._close):
-                    position = float(np.clip(np.mean(np.array(action).flatten()), -1.0, 1.0))
-                    position_change = position - self._last_position
-                    self._last_position = position
-                    bar_return = self._close[idx] / self._close[idx - 1] - 1.0
-                    reward = np.sign(position) * bar_return - 0.0001 * abs(position_change)
-                else:
-                    reward = float(np.mean(state[:5])) * 0.01
+                reward = float(np.mean(state[:5])) * 0.01
                 return state, reward, False, False, {}
 
         return _SimpleEnv()
 
     return DummyVecEnv([_init])
+
+
 def run_trial(
     ablation_group: str,
     observations: np.ndarray,
@@ -374,24 +309,21 @@ def run_trial(
     total_timesteps: int,
     trial_id: int = 0,
     verbose: bool = False,
-    test_observations: np.ndarray = None,
-    df: "pd.DataFrame" = None,
 ) -> dict:
     """
     Run a single training trial with a given feature ablation.
 
     Args:
         ablation_group: Feature group name to ablate, or "ALL" for baseline.
-        observations: Pre-computed observation array (training set).
+        observations: Pre-computed observation array.
         window_size: Number of bars per observation window.
         regime_dim: Regime feature dimension.
         total_timesteps: Number of training timesteps.
         trial_id: Trial index (for logging).
         verbose: If True, print progress.
-        test_observations: Optional hold-out set for evaluation after training.
 
     Returns:
-        Dict with training results and evaluation metrics.
+        Dict with training results.
     """
     obs_dim = observations.shape[1]
     n_features = obs_dim // window_size
@@ -405,7 +337,7 @@ def run_trial(
         print(f"{'='*60}")
 
     # Create environment
-    env = make_env(observations, window_size=window_size, df=df)
+    env = make_env(observations, window_size=window_size)
 
     # Regime detector (synthetic: use a simple heuristic based on recent vol)
     # We inject regime features into the observation tail
@@ -417,7 +349,7 @@ def run_trial(
 
     # Build policy kwargs with regime routing
     policy_kwargs = {
-        "features_extractor_class": FlattenExtractor,
+        "features_extractor_class": None,  # Will use default if we don't override
         "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         "num_regimes": 5,
         "regime_dim": regime_dim,
@@ -448,29 +380,6 @@ def run_trial(
 
         elapsed = time.time() - start_time
 
-        # ── Evaluate on test set ──
-        eval_reward = 0.0
-        win_rate = 0.0
-        sharpe_ratio = 0.0
-        if test_observations is not None and len(test_observations) > window_size:
-            test_env = make_env(test_observations, window_size=window_size, df=df)
-            obs = test_env.reset()
-            done = False
-            rewards = []
-            step_count = 0
-            while not done and step_count < len(test_observations):
-                action, _ = model.predict(obs, deterministic=True)
-                obs, reward_arr, done_arr, _ = test_env.step(action)
-                rewards.append(reward_arr.item())
-                done = done_arr.item()
-                step_count += 1
-            if rewards:
-                eval_reward = sum(rewards)
-                win_rate = sum(1 for r in rewards if r > 0) / len(rewards)
-                mean_r = np.mean(rewards)
-                std_r = np.std(rewards) + 1e-8
-                sharpe_ratio = mean_r / std_r
-
         # Collect metrics
         result = {
             "ablation_group": ablation_group,
@@ -479,13 +388,10 @@ def run_trial(
             "elapsed_seconds": round(elapsed, 1),
             "completed": True,
             "status": "ok",
-            "eval_reward": round(eval_reward, 4),
-            "win_rate": round(win_rate, 4),
-            "sharpe_ratio": round(sharpe_ratio, 4),
         }
 
         if verbose:
-            print(f"  OK Completed in {elapsed:.1f}s | eval_reward={eval_reward:.2f} win_rate={win_rate:.3f} sharpe={sharpe_ratio:.3f}")
+            print(f"  ✓ Completed in {elapsed:.1f}s")
 
     except Exception as exc:
         elapsed = time.time() - start_time if 'start_time' in dir() else 0
@@ -496,12 +402,9 @@ def run_trial(
             "elapsed_seconds": round(elapsed, 1),
             "completed": False,
             "status": str(exc),
-            "eval_reward": 0.0,
-            "win_rate": 0.0,
-            "sharpe_ratio": 0.0,
         }
         if verbose:
-            print(f"  [FAIL] {exc}")
+            print(f"  ✗ Failed: {exc}")
 
     return result
 
@@ -519,11 +422,6 @@ def main():
         help="Total training timesteps per trial (default: 20000)",
     )
     parser.add_argument(
-        "--timesteps",
-        type=int,
-        help="Alias for --steps",
-    )
-    parser.add_argument(
         "--trials",
         type=int,
         default=1,
@@ -533,14 +431,8 @@ def main():
         "--groups",
         type=str,
         nargs="+",
-        default=["ALL", "no_trend", "no_momentum", "no_volatility", "no_volume", "no_regime"],
-        help="Feature groups to test. Options: ALL, no_trend, no_momentum, no_volatility, no_volume, no_regime",
-    )
-    parser.add_argument(
-        "--symbol",
-        type=str,
-        default="SYNTHETIC",
-        help="Symbol name (default: SYNTHETIC, accepted for compatibility)",
+        default=["ALL", "no_volume", "no_momentum", "no_volatility", "no_trend"],
+        help="Feature groups to test",
     )
     parser.add_argument(
         "--output",
@@ -555,10 +447,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Apply --timesteps alias
-    if args.timesteps is not None:
-        args.steps = args.timesteps
-
     print(f"Feature Ablation Test Harness")
     print(f"{'='*60}")
     print(f"Steps per trial: {args.steps}")
@@ -571,9 +459,6 @@ def main():
     df = make_synthetic_ohlcv(n_bars=5000, regimes=4)
 
     # Cache observations for each ablation group to avoid recomputation
-    # Set regime_dim for the observation
-    regime_dim = 6  # 5 one-hot + confidence
-
     obs_cache = {}
     for group in args.groups:
         ablation = group.replace("no_", "").upper() if group.startswith("no_") else None
@@ -581,11 +466,13 @@ def main():
             ablation = None
 
         print(f"\nBuilding observations for '{group}'...")
-        observations, n_features, regime_features = make_synthetic_features(
-            df, window_size=100, ablation_group=ablation, regime_dim=regime_dim
+        observations, n_features = make_synthetic_features(
+            df, window_size=100, ablation_group=ablation
         )
         obs_cache[group] = observations
 
+    # Set regime_dim for the observation
+    regime_dim = 6  # 5 one-hot + confidence
 
     # Run trials
     all_results = []
@@ -594,22 +481,15 @@ def main():
     for group in args.groups:
         observations = obs_cache[group]
 
-        # Split into train/test (80/20)
-        split_idx = int(observations.shape[0] * 0.8)
-        train_obs = observations[:split_idx]
-        test_obs = observations[split_idx:]
-
         for trial in range(args.trials):
             result = run_trial(
                 ablation_group=group,
-                observations=train_obs,
-                test_observations=test_obs,
+                observations=observations,
                 window_size=100,
                 regime_dim=regime_dim,
                 total_timesteps=args.steps,
                 trial_id=trial,
                 verbose=args.verbose,
-                df=df,
             )
             all_results.append(result)
 
@@ -628,19 +508,6 @@ def main():
     if completed:
         avg_time = np.mean([r["elapsed_seconds"] for r in completed])
         print(f"Average time per trial: {avg_time:.1f}s")
-    print()
-    print("  Eval Comparison:")
-    print("  {:<18} {:<10} {:<10} {:<10} {:<10}".format("Group", "Reward", "WinRate", "Sharpe", "Time(s)"))
-    print("  " + "-" * 58)
-    for r in all_results:
-        if r.get("completed"):
-            print("  {:<18} {:<10.4f} {:<10.4f} {:<10.4f} {:<10.1f}".format(
-                r.get("ablation_group", "?"),
-                r.get("eval_reward", 0),
-                r.get("win_rate", 0),
-                r.get("sharpe_ratio", 0),
-                r.get("elapsed_seconds", 0),
-            ))
     print(f"\nResults saved to: {args.output}")
 
 

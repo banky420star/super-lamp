@@ -23,6 +23,7 @@ import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 import torch as th
 
@@ -32,7 +33,6 @@ from training.eval_harness import (
     fit_regime_detector,
     build_regime_observations,
     make_eval_env,
-    plot_regime_action_distribution,
     REGIME_DIM,
 )
 
@@ -148,10 +148,97 @@ print(
 # Plot per-regime action distributions
 # ════════════════════════════════════════════════════════════════════════
 
-fig = plot_regime_action_distribution(
-    positions_arr,
-    regime_indices_arr,
-    regime_labels=REGIME_LABELS,
-    title="Per-Regime Action Distribution - RegimeRoutedPPO (ALL)",
-    save_path="logs/regime_action_distribution.png",
+fig, axes = plt.subplots(1, 5, figsize=(18, 4), sharey=True)
+
+colors_short = "#e74c3c"
+colors_flat = "#95a5a6"
+colors_long = "#2ecc71"
+
+for r in range(5):
+    ax = axes[r]
+    mask = regime_indices_arr == r
+    pos_r = positions_arr[mask]
+    n_r = len(pos_r)
+
+    if n_r == 0:
+        ax.text(
+            0.5,
+            0.5,
+            "No steps",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=11,
+            color="gray",
+        )
+        ax.set_title(f"{REGIME_LABELS[r]}\n(0 steps)", fontsize=10)
+        ax.set_xticks([0, 1, 2])
+        ax.set_xticklabels(["Short", "Flat", "Long"])
+        continue
+
+    n_short = int((pos_r == -1).sum())
+    n_flat = int((pos_r == 0).sum())
+    n_long = int((pos_r == 1).sum())
+
+    bars = ax.bar(
+        ["Short (-1)", "Flat (0)", "Long (+1)"],
+        [n_short, n_flat, n_long],
+        color=[colors_short, colors_flat, colors_long],
+        edgecolor="white",
+        linewidth=0.8,
+    )
+
+    for bar, count in zip(bars, [n_short, n_flat, n_long]):
+        pct = count / n_r * 100
+        if pct > 0:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + max(1, n_r * 0.01),
+                f"{pct:.1f}%",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+            )
+
+    ax.set_title(
+        f"{REGIME_LABELS[r]}\n({n_r} steps)", fontsize=10, fontweight="bold"
+    )
+    ax.set_ylim(0, max(n_short, n_flat, n_long) * 1.25)
+    ax.tick_params(axis="x", labelsize=8)
+
+axes[0].set_ylabel("Step count", fontsize=10)
+
+fig.suptitle(
+    "Per-Regime Action Distribution — RegimeRoutedPPO (ALL)",
+    fontsize=13,
+    fontweight="bold",
+    y=1.02,
 )
+
+plt.tight_layout()
+os.makedirs("logs", exist_ok=True)
+out_path = "logs/regime_action_distribution.png"
+fig.savefig(out_path, dpi=150, bbox_inches="tight")
+print(f"\nSaved: {out_path}")
+
+# Print summary table
+print("\n" + "=" * 60)
+print("  Per-Regime Action Distribution Summary")
+print("=" * 60)
+print(f"  {'Regime':<16} {'Steps':>6} {'Short%':>8} {'Flat%':>8} {'Long%':>8}")
+print("  " + "-" * 46)
+for r in range(5):
+    mask = regime_indices_arr == r
+    n = mask.sum()
+    if n > 0:
+        short_pct = (positions_arr[mask] == -1).mean() * 100
+        flat_pct = (positions_arr[mask] == 0).mean() * 100
+        long_pct = (positions_arr[mask] == 1).mean() * 100
+    else:
+        short_pct = flat_pct = long_pct = 0.0
+    print(
+        f"  {REGIME_LABELS[r]:<16} {n:>6} "
+        f"{short_pct:>7.1f}% {flat_pct:>7.1f}% {long_pct:>7.1f}%"
+    )
+print()

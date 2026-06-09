@@ -8,11 +8,8 @@ providing the PPO agent with learned time-series representations.
 Gated by env var: AGI_USE_CHRONOS=1 (or model ID like chronos-bolt-base)
 
 Usage:
-    extractor = ChronosExtractor()                           # auto-selects device
-    extractor = ChronosExtractor(device="auto")              # explicit auto
-    extractor = ChronosExtractor(device="cuda")              # force GPU
-    extractor = ChronosExtractor(device="cpu")               # force CPU
-    embedding = extractor(close_prices)                       # returns (512,) numpy array
+    extractor = ChronosExtractor()
+    embedding = extractor(close_prices)  # returns (512,) numpy array
 """
 
 import os
@@ -58,26 +55,6 @@ def chronos_embedding_dim(model_id: str | None = None) -> int:
     return _CHRONOS_MODEL_DIMS.get(resolved, _CHRONOS_BASE_DIM)
 
 
-def _auto_select_device() -> str:
-    """
-    Auto-select the best available device for PyTorch.
-
-    Priority:
-    1. CUDA (NVIDIA GPU)
-    2. MPS (Apple Silicon)
-    3. CPU (fallback)
-    """
-    try:
-        import torch
-        if torch.cuda.is_available():
-            return "cuda"
-        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return "mps"
-    except ImportError:
-        pass
-    return "cpu"
-
-
 class ChronosExtractor:
     """
     Extracts Chronos-bolt-base embeddings from OHLCV close-price windows.
@@ -89,10 +66,8 @@ class ChronosExtractor:
     can be created without paying the HF download cost upfront.
     """
 
-    def __init__(self, model_id: str | None = None, device: str = "auto"):
+    def __init__(self, model_id: str | None = None, device: str = "cpu"):
         self.model_id = _resolve_model_id(model_id)
-        if device == "auto":
-            device = _auto_select_device()
         self.device = device
         self._model = None
         self._loaded = False
