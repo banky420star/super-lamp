@@ -141,6 +141,33 @@ def _model_weight_fingerprint(model) -> str:
     return hashlib.md5(flat.astype(np.float32).tobytes()).hexdigest()[:12]
 
 
+def _action_distribution_entropy(positions: np.ndarray, n_bins: int = 5) -> float:
+    """Binned Shannon entropy of the position distribution.
+
+    Buckets positions into n_bins equally-spaced intervals over [-1, 1] and
+    computes Shannon entropy, normalised to [0, 1] by dividing by log(n_bins).
+
+    Interpretation:
+      - 0.000 = all positions in one bucket → policy stuck / saturated
+      - 0.500 = positions spread across ~sqrt(n_bins) buckets
+      - 1.000 = uniform across all buckets → maximally diverse
+    """
+    positions = np.asarray(positions, dtype=np.float64)
+    if len(positions) == 0:
+        return 0.0
+    bins = np.linspace(-1.0, 1.0, n_bins + 1)
+    # Make boundaries strict so the full [-1, 1] range is covered
+    bins[0] = -np.inf
+    bins[-1] = np.inf
+    counts, _ = np.histogram(positions, bins=bins)
+    probs = counts / counts.sum()
+    probs = probs[probs > 0]  # drop empty bins for entropy calc
+    entropy = -np.sum(probs * np.log(probs))
+    max_entropy = np.log(max(n_bins, 2))
+    normalised = float(entropy / max_entropy) if max_entropy > 0 else 0.0
+    return round(normalised, 6)
+
+
 # ── Real Data & Features ──────────────────────────────────────────────
 
 def load_real_data(
@@ -643,6 +670,16 @@ def _evaluate(
             "avg_win": 0.0,
             "avg_loss": 0.0,
             "validation_samples": 0,
+            "action_hash": "N/A",
+            "position_mean": 0.0,
+            "position_std": 0.0,
+            "position_min": 0.0,
+            "position_max": 0.0,
+            "long_pct": 0.0,
+            "short_pct": 0.0,
+            "flat_pct": 0.0,
+            "action_abs_mean": 0.0,
+            "action_entropy": 0.0,
         }
 
     n_features = feature_matrix.shape[1]
@@ -737,6 +774,10 @@ def _evaluate(
         "short_pct": round(float(np.mean(positions < -0.05)), 6),
         "flat_pct": round(float(np.mean(np.abs(positions) <= 0.05)), 6),
         "action_abs_mean": round(float(np.mean(np.abs(positions))), 6),
+        # Action entropy — binned Shannon entropy of position distribution.
+        # Zero means all positions fall in one bucket (policy stuck/saturated).
+        # High entropy means the policy is exploring diverse position sizes.
+        "action_entropy": _action_distribution_entropy(positions),
     }
 
 
@@ -997,8 +1038,8 @@ def main():
 
         # ── Position distribution summary ──
         print(f"\n[POSITIONS] Per-group position distribution:")
-        print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10}")
-        print(f"  {'-'*94}")
+        print(f"  {'Group':<20} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10} {'Long%':<8} {'Short%':<8} {'Flat%':<8} {'AbsMean':<10} {'Entropy':<10}")
+        print(f"  {'-'*113}")
         for r in completed:
             pm = r.get("position_mean", 0)
             ps = r.get("position_std", 0)
@@ -1008,7 +1049,8 @@ def main():
             sp = r.get("short_pct", 0)
             fp = r.get("flat_pct", 0)
             am = r.get("action_abs_mean", 0)
-            print(f"  {r['ablation_group']:<20} {pm:<10.4f} {ps:<10.4f} {pmin:<10.4f} {pmax:<10.4f} {lp:<8.1%} {sp:<8.1%} {fp:<8.1%} {am:<10.4f}")
+            ent = r.get("action_entropy", 0)
+            print(f"  {r['ablation_group']:<20} {pm:<10.4f} {ps:<10.4f} {pmin:<10.4f} {pmax:<10.4f} {lp:<8.1%} {sp:<8.1%} {fp:<8.1%} {am:<10.4f} {ent:<10.4f}")
 
         # Best performer by Sharpe
         best = max(completed, key=lambda r: r.get("sharpe_ratio", -999))
