@@ -338,7 +338,7 @@ def make_env(
     rewards: np.ndarray,
     window_size: int = 100,
     regime_dim: int = 5,
-    turnover_penalty: float = 0.0,
+    turnover_penalty: float = 0.0,  # 0.0 = removed; turnover penalises switching (opposite of tactical positioning)
     concentration_penalty: float = 0.001,
 ) -> DummyVecEnv:
     """Create a DummyVecEnv that feeds real feature observations.
@@ -397,7 +397,7 @@ def make_env(
                 concentration_cost = concentration_penalty * (position ** 2)
                 self._last_position = position
 
-                reward = raw_reward - turnover_cost - concentration_cost
+                reward = position * raw_reward - turnover_cost - concentration_cost
                 return obs, reward, False, False, {}
 
             def _get_obs(self, idx: int) -> np.ndarray:
