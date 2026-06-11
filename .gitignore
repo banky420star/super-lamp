@@ -49,3 +49,41 @@ trades.db*
 scripts/prr_health_check.sh
 start_dryrun_mac.sh
 docs/PRODUCTION_READINESS_REPORT.md
+
+# Experiment / training run artifacts (large, transient, not source)
+runtime/agent_status/
+runtime/lane_*.csv
+runtime/lane_*.png
+runtime/tamed_*.csv
+runtime/tamed_*.png
+runtime/positions_*_ALL*.csv
+runtime/positions_*_ALL*.png
+runtime/*equity_curves.png
+runtime/lane_b_raw_all_seeds*
+runtime/*trial*.csv
+runtime/*trial*.png
+# Keep only curated results under artifacts/ or docs/results/ if needed for history
+
+# One-off local debug / boot scripts (keep in working tree but do not commit)
+add_win_streak_again.py
+boot_verify.py
+cold_boot_test.py
+deminify_mt5.py
+full_boot_simulation.py
+gen_arch.py
+launch_xau_training.py
+plot_position_timeseries.py
+recover_mt5_executor.py
+test_agi.py
+test_startup_log.py
+verify_startup_log.py
+review_sanity_test.py
+tests/run_backtest*.py
+tests/test_regime_detector.py
+training/pretrain_lstm.py
+training/run_trading_env_quick_test.py
+
+# Large per-run data dumps
+audit_xauusd_*.csv
+artifacts/mql5_shadow_guidance/
+
