@@ -10,7 +10,7 @@ CLI args:
     --n-bars      Number of bars to load (default: 100000)
     --steps       Total training timesteps (default: 50000)
     --seed        Single seed to run (optional, default: run all 3 seeds)
-    --timeframe   MT5 timeframe (default: 1m)
+    --timeframe   MT5 timeframe (default: M5)
 
 Output: runtime/lane_b_raw_all_seeds.csv
 """
@@ -37,31 +37,35 @@ SYMBOL = "XAUUSDm"
 N_BARS = 100000
 N_STEPS = 50000
 SEEDS = [42, 123, 456]
-TIMEFRAME = "1m"
+TIMEFRAME = "M5"
 
 
 # ── Fixed config (not CLI-overridable) ──
-N_FEATURES = 5          # open, high, low, close, volume
-WINDOW_SIZE = 64
+N_FEATURES = 9          # open, high, low, close, volume + hour_sin, hour_cos, dow_sin, dow_cos
+WINDOW_SIZE = 64        # 64 × 5min = 320min ≈ 5.3 hours of context
 HIDDEN_SIZE = 128
 N_LSTM_LAYERS = 2
 FEATURES_DIM = 64
 
 # Taming parameters
-TURNOVER_COST = 0.005
+TURNOVER_COST = 0.0003      # realistic XAUUSD spread + slippage (~3 bps)
 CONCENTRATION_PENALTY = 0.002
 POSITION_SMOOTHING_ALPHA = 0.3
 COOLDOWN_STEPS = 5
+REWARD_HORIZON = 5          # predict 5-bar forward return
+REWARD_SCALE = 1000.0       # scale raw returns (~0.001) to PPO-friendly range (~1.0)
 
 
 # ── Tamed environment ──
 class TamedOHLCVEnv(BaseTamedEnv):
-    """Raw OHLCV environment with EMA smoothing, cooldown, and penalties."""
+    """Raw OHLCV + session-feature environment with EMA smoothing, cooldown, and penalties."""
     def __init__(self, df, window_size=WINDOW_SIZE,
                  turnover_cost=TURNOVER_COST,
                  concentration_penalty=CONCENTRATION_PENALTY,
                  smoothing_alpha=POSITION_SMOOTHING_ALPHA,
                  cooldown_steps=COOLDOWN_STEPS):
+        # Store timestamps before reset_index destroys them
+        self._timestamps = df.index.copy()
         self.df = df.reset_index(drop=True)
         n = len(self.df)
         super().__init__(
@@ -72,11 +76,12 @@ class TamedOHLCVEnv(BaseTamedEnv):
             cooldown_steps=cooldown_steps,
             n=n,
             n_features=N_FEATURES,
+            reward_scale=REWARD_SCALE,
         )
         self._build_features()
 
     def _build_features(self):
-        """Convert OHLCV to normalized log-return features."""
+        """Build OHLCV log-returns + session encoding + H-bar forward signal."""
         o = self.df["open"].values.astype(np.float64)
         h = self.df["high"].values.astype(np.float64)
         l = self.df["low"].values.astype(np.float64)
@@ -84,30 +89,49 @@ class TamedOHLCVEnv(BaseTamedEnv):
         v = self.df["volume"].values.astype(np.float64)
 
         n = len(self.df)
-        feats = np.zeros((n, N_FEATURES), dtype=np.float32)
+        H = REWARD_HORIZON
 
+        # ── OHLCV log-return features (columns 0-4) ──
+        ohlcv = np.zeros((n, 5), dtype=np.float32)
         for i in range(n):
             if i == 0:
-                feats[i] = [0.0, 0.0, 0.0, 0.0, 0.0]
-            else:
-                feats[i, 0] = np.log(o[i] / o[i-1]) if o[i-1] > 0 else 0.0
-                feats[i, 1] = np.log(h[i] / h[i-1]) if h[i-1] > 0 else 0.0
-                feats[i, 2] = np.log(l[i] / l[i-1]) if l[i-1] > 0 else 0.0
-                feats[i, 3] = np.log(c[i] / c[i-1]) if c[i-1] > 0 else 0.0
-                feats[i, 4] = np.log(v[i] / v[i-1]) if v[i-1] > 0 else 0.0
+                continue
+            ohlcv[i, 0] = np.log(o[i] / o[i-1]) if o[i-1] > 0 else 0.0
+            ohlcv[i, 1] = np.log(h[i] / h[i-1]) if h[i-1] > 0 else 0.0
+            ohlcv[i, 2] = np.log(l[i] / l[i-1]) if l[i-1] > 0 else 0.0
+            ohlcv[i, 3] = np.log(c[i] / c[i-1]) if c[i-1] > 0 else 0.0
+            ohlcv[i, 4] = np.log(v[i] / v[i-1]) if v[i-1] > 0 else 0.0
 
-        # Full-data z-score (O(n) per column)
-        self.features = np.zeros_like(feats)
-        for col in range(N_FEATURES):
-            col_data = feats[:, col]
+        # Z-score normalize OHLCV features only
+        ohlcv_z = np.zeros_like(ohlcv)
+        for col in range(5):
+            col_data = ohlcv[:, col]
             mean = np.mean(col_data)
             std = np.std(col_data)
-            self.features[:, col] = (col_data - mean) / max(std, 1e-10)
+            ohlcv_z[:, col] = (col_data - mean) / max(std, 1e-10)
 
-        # Forward return signal (cached for _raw_reward_at)
+        # ── Session encoding (columns 5-8, NOT z-scored — already in [-1,1]) ──
+        session = np.zeros((n, 4), dtype=np.float32)
+        try:
+            timestamps = pd.to_datetime(self._timestamps)
+            for i in range(n):
+                ts = timestamps[i]
+                hour = ts.hour + ts.minute / 60.0
+                dow = ts.dayofweek
+                session[i, 0] = np.sin(2 * np.pi * hour / 24)
+                session[i, 1] = np.cos(2 * np.pi * hour / 24)
+                session[i, 2] = np.sin(2 * np.pi * dow / 5)
+                session[i, 3] = np.cos(2 * np.pi * dow / 5)
+        except Exception:
+            pass  # no datetime index → session features stay at 0
+
+        # Combine features
+        self.features = np.concatenate([ohlcv_z, session], axis=1).astype(np.float32)
+
+        # ── H-bar forward return (raw, no vol normalization) ──
         self._forward_ret = np.zeros(n, dtype=np.float32)
-        for i in range(n - 1):
-            self._forward_ret[i] = (c[i+1] / c[i]) - 1.0
+        for i in range(n - H):
+            self._forward_ret[i] = float((c[i+H] / c[i]) - 1.0)
 
     def _raw_reward_at(self, idx):
         return self._forward_ret[idx]
@@ -146,6 +170,7 @@ class LSTMFeatureExtractor(BaseFeaturesExtractor):
 def train_seed(seed, train_df):
     """Train a PPO model with the given seed, return (model, callback)."""
     np.random.seed(seed)
+    torch.manual_seed(seed)
 
     def make_env():
         return TamedOHLCVEnv(train_df)
@@ -162,14 +187,14 @@ def train_seed(seed, train_df):
     model = PPO(
         "MlpPolicy",
         train_env,
-        learning_rate=3e-4,
-        n_steps=1024,
+        learning_rate=1e-4,       # lower LR for financial data (research: 1e-4 to 5e-5)
+        n_steps=2048,             # longer rollout for M5 bars (research: 2048-4096)
         batch_size=64,
         n_epochs=10,
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
-        ent_coef=0.01,
+        ent_coef=0.03,            # higher entropy for exploration (research: 0.01-0.05)
         vf_coef=0.5,
         max_grad_norm=0.5,
         policy_kwargs=policy_kwargs,
@@ -205,19 +230,27 @@ def main():
     print("LANE B — TAMED RAW OHLCV + LSTM (3-seed walk-forward)")
     print("=" * 64)
     print()
-    print(f"  Taming config:")
+    print(f"  Config:")
+    print(f"    timeframe:           {TIMEFRAME}")
+    print(f"    n_features:          {N_FEATURES} (5 OHLCV + 4 session)")
+    print(f"    window_size:         {WINDOW_SIZE} bars ({WINDOW_SIZE*5} min)")
     print(f"    turnover_cost:       {TURNOVER_COST}")
     print(f"    concentration_penalty: {CONCENTRATION_PENALTY}")
     print(f"    smoothing_alpha:     {POSITION_SMOOTHING_ALPHA}")
     print(f"    cooldown_steps:      {COOLDOWN_STEPS}")
+    print(f"    reward_horizon:      {REWARD_HORIZON} bars ({REWARD_HORIZON*5} min)")
+    print(f"    reward_scale:        {REWARD_SCALE}")
     print(f"    total_timesteps:     {N_STEPS}")
+    print(f"    ppo n_steps:         2048")
+    print(f"    ppo ent_coef:        0.03")
+    print(f"    ppo learning_rate:   1e-4")
     print(f"    seeds:               {SEEDS}")
     print(f"    symbol:              {SYMBOL}")
     print(f"    n_bars:              {N_BARS}")
-    print(f"    timeframe:           {TIMEFRAME}")
     print()
 
     # Load data
+    print(f"  Loading {SYMBOL} data ({TIMEFRAME}, {N_BARS} bars)...")
     df = load_real_data(symbol=SYMBOL, n_bars=N_BARS)
     print(f"  Loaded {len(df)} bars of {SYMBOL}")
     split = int(len(df) * 0.7)
@@ -255,12 +288,12 @@ def main():
         all_train_metrics.append(train_metrics)
 
         print(f"    Training: {train_time:.1f}s ({N_STEPS/train_time:.0f} steps/s)")
-        print(f"    Total bars: {N_BARS} ({len(train_df)} train)")
         print(f"    Train long%={train_metrics['long_pct']:.1f} short%={train_metrics['short_pct']:.1f} "
               f"flat%={train_metrics['flat_pct']:.1f}")
 
         # Validation
-        val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE))
+        val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE),
+                               turnover_cost=TURNOVER_COST)
         val_metrics["weight_hash"] = compute_weight_hash(model)
         all_val_metrics.append(val_metrics)
         all_positions.append(val_metrics["positions"])
@@ -345,7 +378,7 @@ def main():
             ax2.grid(alpha=0.3)
         axes[-1, 0].set_xlabel("Validation step")
         axes[-1, 1].set_xlabel("Validation step")
-        plt.suptitle("Tamed Raw OHLCV + LSTM — 3-Seed Walk-Forward", fontsize=13)
+        plt.suptitle("Tamed Raw OHLCV + LSTM — 3-Seed Walk-Forward (M5)", fontsize=13)
         plt.tight_layout()
         plt.savefig("runtime/lane_b_raw_all_seeds.png", dpi=150)
         plt.close()
@@ -374,11 +407,11 @@ def main():
         improvements.append(f"Return improved: {avg_return:.2f}% vs 0.55%")
 
     if improvements:
-        print("  Taming improvements:")
+        print("  Improvements vs baseline:")
         for imp in improvements:
             print(f"    + {imp}")
     else:
-        print("  Taming did not improve over baseline.")
+        print("  No improvement over baseline.")
         print("  Possible cause: signal is too weak for any amount of regularization.")
     print()
     print("  Done.")

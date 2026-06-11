@@ -39,14 +39,14 @@ SEEDS = [42, 123, 456]
 
 
 # ── Fixed config ──
-LOOKAHEAD = 1
+LOOKAHEAD = 5              # predict 5-bar forward return (better signal/noise than 1-bar)
 WINDOW_SIZE = 64
 HIDDEN_SIZE = 128
 N_LSTM_LAYERS = 2
 FEATURES_DIM = 64
 
 # Taming (same as Lane B)
-TURNOVER_COST = 0.005
+TURNOVER_COST = 0.0003      # realistic XAUUSD 1m spread + slippage (~3 bps)
 CONCENTRATION_PENALTY = 0.002
 SMOOTHING_ALPHA = 0.3
 COOLDOWN_STEPS = 5
@@ -251,7 +251,8 @@ def main():
         print(f"    Train: {train_m['long_pct']:.1f}%L / {train_m['short_pct']:.1f}%S / {train_m['flat_pct']:.1f}%F")
 
         # Validation
-        val_m = evaluate(model, lambda: FixedFeatureEnv(val_f, val_s, window_size=WINDOW_SIZE))
+        val_m = evaluate(model, lambda: FixedFeatureEnv(val_f, val_s, window_size=WINDOW_SIZE),
+                         turnover_cost=TURNOVER_COST)
         val_m["weight_hash"] = compute_weight_hash(model)
         all_val.append(val_m)
         all_positions.append(val_m.pop("positions"))

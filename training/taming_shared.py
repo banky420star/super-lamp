@@ -24,11 +24,12 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 
 # ── Shared config defaults (overridable by subclasses / callers) ──
-DEFAULT_TURNOVER_COST = 0.005
+DEFAULT_TURNOVER_COST = 0.0003  # realistic XAUUSD spread + slippage (~3 bps)
 DEFAULT_CONCENTRATION_PENALTY = 0.002
 DEFAULT_SMOOTHING_ALPHA = 0.3
 DEFAULT_COOLDOWN_STEPS = 5
 DEFAULT_WINDOW_SIZE = 64
+DEFAULT_REWARD_SCALE = 1000.0  # scale raw returns (~0.001) to PPO-friendly range (~1.0)
 
 
 class BaseTamedEnv(gym.Env):
@@ -40,7 +41,8 @@ class BaseTamedEnv(gym.Env):
         _raw_reward_at(idx)   — return the raw forward return at the given index
     """
     def __init__(self, *, window_size, turnover_cost, concentration_penalty,
-                 smoothing_alpha, cooldown_steps, n, n_features):
+                 smoothing_alpha, cooldown_steps, n, n_features,
+                 reward_scale=DEFAULT_REWARD_SCALE):
         super().__init__()
         self.window_size = window_size
         self.turnover_cost = turnover_cost
@@ -49,6 +51,7 @@ class BaseTamedEnv(gym.Env):
         self.cooldown_steps = cooldown_steps
         self.n = n
         self.n_features = n_features
+        self.reward_scale = reward_scale
 
         obs_dim = self.window_size * self.n_features
         self.observation_space = spaces.Box(
@@ -108,13 +111,13 @@ class BaseTamedEnv(gym.Env):
         # Apply cooldown clamp
         final_position = self._apply_cooldown(smoothed)
 
-        # Reward
+        # Reward (scaled for PPO stability: raw returns ~0.001 → ~1.0)
         raw_reward = self._raw_reward_at(self.idx)
         growth = final_position * raw_reward
         pos_change = abs(final_position - self._prev_smoothed)
         tc = self.turnover_cost * pos_change
         cc = self.concentration_penalty * (final_position ** 2)
-        reward = growth - tc - cc
+        reward = (growth - tc - cc) * self.reward_scale
 
         self._prev_smoothed = final_position
         self._step_count += 1
@@ -168,7 +171,7 @@ def compute_weight_hash(model):
     return hasher.hexdigest()[:12]
 
 
-def evaluate(model, env_factory, annualization_factor=252 * 288):
+def evaluate(model, env_factory, annualization_factor=252 * 288, turnover_cost=0.0):
     """
     Run deterministic evaluation on an env created by env_factory.
 
@@ -181,6 +184,9 @@ def evaluate(model, env_factory, annualization_factor=252 * 288):
         "position" and "raw_reward".
     annualization_factor : float
         Factor to annualize Sharpe (default 252*288 for 1m bars).
+    turnover_cost : float
+        Transaction cost per unit of position change, deducted from
+        net worth (default 0.0 = no costs, for backward compat).
 
     Returns
     -------
@@ -191,30 +197,33 @@ def evaluate(model, env_factory, annualization_factor=252 * 288):
     env = env_factory()
     obs, _ = env.reset()
     positions = []
-    raw_rewards = []
     net_worth = [10000.0]
     done = False
     step = 0
+    prev_position = 0.0
 
     while not done and step < 1_000_000:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
-        positions.append(info["position"])
-        raw_rewards.append(info["raw_reward"])
-        net_worth.append(net_worth[-1] * (1 + info["raw_reward"] * info["position"]))
+        pos_now = info["position"]
+        # Deduct turnover cost from net worth (honest evaluation)
+        tc = turnover_cost * abs(pos_now - prev_position)
+        nw_growth = 1.0 + info["raw_reward"] * pos_now - tc
+        net_worth.append(net_worth[-1] * max(nw_growth, 0.0))
+        prev_position = pos_now
+        positions.append(pos_now)
         step += 1
 
     pos = np.array(positions)
-    raw = np.array(raw_rewards)
     nw = np.array(net_worth)
     total_ret = (nw[-1] / nw[0] - 1) * 100 if len(nw) > 1 else 0.0
 
-    # Sharpe on strategy returns
-    strat_returns = raw * pos
+    # Sharpe from net worth returns (includes turnover costs, honest metric)
+    nw_returns = np.diff(nw) / nw[:-1]
     sharpe = 0.0
-    if np.std(strat_returns) > 1e-10 and len(strat_returns) > 1:
-        sharpe = float(np.mean(strat_returns) / np.std(strat_returns) * np.sqrt(annualization_factor))
+    if len(nw_returns) > 1 and np.std(nw_returns) > 1e-10:
+        sharpe = float(np.mean(nw_returns) / np.std(nw_returns) * np.sqrt(annualization_factor))
 
     # Turnover: % of steps where position changes by >1%
     turnover = 0.0
