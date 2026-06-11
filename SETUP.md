@@ -104,6 +104,25 @@ Invoke-RestMethod http://127.0.0.1:8088/api/status
 - `models/dreamer/` Dreamer artifacts
 - `docs/results/` release and evidence outputs
 
-## 7. Operational note
+## 7. GitHub + Branch Hygiene (Critical for Safety)
+
+Always start from the canonical checkout of https://github.com/banky420star/super-lamp.git:
+
+```powershell
+cd C:\supreme-chainsaw
+git fetch origin
+git checkout -b feature/your-safe-work  # NEW BRANCH FIRST (per review feedback — never edit main or long-lived experiment branches directly)
+git push -u origin feature/your-safe-work
+```
+
+- Push experiment/feature branches freely (CI triggers on `experiment/**` and will run compile + tests).
+- Create PRs on GitHub when ready (reference docs/FULL_STACK_PROFITABILITY_REVIEW.md for context).
+- Pull updates: `git pull origin main`.
+- Desktop convenience copies: After any pull or edits, run `python tools/update_desktop_clean_copy.py` (regenerates SupremeChainsaw_Clean with the bucket layout: 01_Launchers, 02_Core_Python/* etc.). Do not commit inside the Desktop copies.
+- Never work from C:\windows\system32 or other system paths (they have been cleaned of stray copies).
+
+See also PRODUCTION.md (Upgrading section) and the profitability review in docs/.
+
+## 8. Operational note
 
 The code can be healthy while the live bot still stays flat if the currently promoted champion is weak. Training/promoting updated artifacts is a separate step from code hygiene.
