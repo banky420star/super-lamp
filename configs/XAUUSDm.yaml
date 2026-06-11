@@ -11,8 +11,8 @@ data:
 drl:
   batch_size: 512
   clip_range: 0.2
-  ent_coef: 0.005
-  feature_version: engineered_v3
+  ent_coef: 0.02   # Tier 0 profitability: slightly higher entropy to encourage exploration (was 0.005, contributed to flat collapse)
+  feature_version: ultimate_150   # Tier 0: richer features; MTF support via multitimeframe_builder when data pipeline provides it
   gae_lambda: 0.95
   gamma: 0.995
   initial_balance: 10000.0
@@ -28,6 +28,12 @@ drl:
   n_steps: 4096
   sde_sample_freq: 4
   target_kl: 0.01
+  # Tier 0 profitability from FULL_STACK_PROFITABILITY_REVIEW.md:
+  # - use_trend_momentum_bias: enabled by default in train_drl.py for XAU (momentum/trend as explicit layer before the rest)
+  # - Clean dead columns (pattern_*, many cross_asset_*) are skipped in registry for this symbol
+  # - Combined with 100% TradingReward primary (no more 80/20 dilution)
+  use_trend_momentum_bias: true
+  use_mtf: true   # prefer multitimeframe features when available (1m/5m/15m/1h)
   total_timesteps: 100000
   use_sde: true
 lstm:

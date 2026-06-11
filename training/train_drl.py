@@ -646,9 +646,22 @@ def _policy_kwargs_for(feature_version: str) -> dict:
     if feature_version == ULTIMATE_150:
         # A/B test: AGI_ATTENTION_HEADS=1 (single-head) vs AGI_ATTENTION_HEADS=4 (multi-head)
         _attn_heads = int(os.environ.get("AGI_ATTENTION_HEADS", "4"))
+        # Tier 0 profitability: default-enable TrendMomentumBiasLayer (explicit momentum/trend prior layer)
+        # This addresses the "rich features but doesn't know how to use them" problem.
+        # Controlled by env or config; default True for better signal on XAU etc.
+        _use_bias = bool(os.environ.get("AGI_USE_TREND_MOMENTUM_BIAS", "1"))
+        _use_gate = os.environ.get("AGI_USE_FEATURE_GATE", "0") == "1"
+        _regime_dim = NUM_REGIMES + 1 if os.environ.get("AGI_USE_REGIME", "0") == "1" else 0
         return dict(
             features_extractor_class=AdaptiveLSTMFeatureExtractor,
-            features_extractor_kwargs=dict(features_dim=256, window_size=100, num_heads=_attn_heads,                                               regime_dim=NUM_REGIMES + 1 if os.environ.get("AGI_USE_REGIME", "0") == "1" else 0, use_feature_gate=os.environ.get("AGI_USE_FEATURE_GATE", "0") == "1"),
+            features_extractor_kwargs=dict(
+                features_dim=256,
+                window_size=100,
+                num_heads=_attn_heads,
+                regime_dim=_regime_dim,
+                use_feature_gate=_use_gate,
+                use_trend_momentum_bias=_use_bias,
+            ),
             net_arch=[512, 256],
             activation_fn=torch.nn.LeakyReLU,
             log_std_init=log_std_init,
