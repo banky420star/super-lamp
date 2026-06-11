@@ -94,8 +94,10 @@ def _model_weight_fingerprint(model) -> str:
 def _action_distribution_entropy(positions: np.ndarray, n_bins: int = 5) -> float:
     """Binned Shannon entropy of the position distribution.
 
-    Buckets positions into n_bins equally-spaced intervals over [-1, 1] and
-    computes Shannon entropy, normalised to [0, 1] by dividing by log(n_bins).
+    Uses adaptive binning based on the actual range of positions so that
+    a policy operating in a narrow band (e.g. [-0.2, 0.2]) is NOT falsely
+    reported as zero entropy. Bins are spread over [pos_min, pos_max] with
+    5% padding on each side.
 
     Interpretation:
       - 0.000 = all positions in one bucket → policy stuck / saturated
@@ -105,17 +107,27 @@ def _action_distribution_entropy(positions: np.ndarray, n_bins: int = 5) -> floa
     positions = np.asarray(positions, dtype=np.float64)
     if len(positions) == 0:
         return 0.0
-    bins = np.linspace(-1.0, 1.0, n_bins + 1)
-    # Make boundaries strict so the full [-1, 1] range is covered
+
+    pmin, pmax = float(positions.min()), float(positions.max())
+    if abs(pmax - pmin) < 1e-12:
+        # All positions identical: zero entropy
+        return 0.0
+
+    # Adaptive binning: spread n_bins over [pmin, pmax] with 5% padding
+    pad = 0.05 * (pmax - pmin)
+    lo = pmin - pad
+    hi = pmax + pad
+    bins = np.linspace(lo, hi, n_bins + 1)
     bins[0] = -np.inf
     bins[-1] = np.inf
+
     counts, _ = np.histogram(positions, bins=bins)
     probs = counts / counts.sum()
     probs = probs[probs > 0]  # drop empty bins for entropy calc
     entropy = -np.sum(probs * np.log(probs))
     max_entropy = np.log(max(n_bins, 2))
     normalised = float(entropy / max_entropy) if max_entropy > 0 else 0.0
-    return round(normalised, 6)
+    return round(normalised, 6) + 0.0  # coerce -0.0 to 0.0
 
 
 # ── Real Data & Features ──────────────────────────────────────────────
@@ -321,6 +333,13 @@ def make_env(
                 self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
                 self._step = window_size
                 self._max_step = n_bars - 1
+                self._reward_count = 0
+                self._reward_accum = {
+                    "growth": 0.0,
+                    "raw_reward": 0.0,
+                    "turnover_cost": 0.0,
+                    "concentration_cost": 0.0,
+                }
                 self._last_position = 0.0
 
             def reset(self, seed=None, options=None):
@@ -330,6 +349,19 @@ def make_env(
                 # Return first observation
                 obs = self._get_obs(self._step)
                 return obs, {}
+
+            def pop_reward_components(self):
+                if self._reward_count == 0:
+                    return {}
+                result = {k: float(v / self._reward_count) for k, v in self._reward_accum.items()}
+                self._reward_accum = {
+                    "growth": 0.0,
+                    "raw_reward": 0.0,
+                    "turnover_cost": 0.0,
+                    "concentration_cost": 0.0,
+                }
+                self._reward_count = 0
+                return result
 
             def step(self, action):
                 self._step += 1
@@ -348,7 +380,16 @@ def make_env(
                 concentration_cost = concentration_penalty * (position ** 2)
                 self._last_position = position
 
-                reward = position * raw_reward - turnover_cost - concentration_cost
+                growth = position * raw_reward
+                reward = growth - turnover_cost - concentration_cost
+
+                # Accumulate reward components
+                self._reward_count += 1
+                self._reward_accum["growth"] += growth
+                self._reward_accum["raw_reward"] += raw_reward
+                self._reward_accum["turnover_cost"] += turnover_cost
+                self._reward_accum["concentration_cost"] += concentration_cost
+
                 return obs, reward, False, False, {}
 
             def _get_obs(self, idx: int) -> np.ndarray:
@@ -492,11 +533,56 @@ def run_trial(
             **val_metrics,
         })
 
+        # ── Extract reward component means ──
+        reward_components = env.envs[0].pop_reward_components()
+
         if verbose:
             sharpe = val_metrics.get("sharpe_ratio", 0)
             win_rate = val_metrics.get("win_rate", 0)
             profit_factor = val_metrics.get("profit_factor", 0)
             print(f"  [OK] Completed in {elapsed:.1f}s | Sharpe: {sharpe:.3f} | WinRate: {win_rate:.1%} | PF: {profit_factor:.2f}")
+            if reward_components:
+                rc = reward_components
+                print(f"  [REWARD_COMPONENTS] growth={rc['growth']:.6f}  raw_reward={rc['raw_reward']:.6f}  "
+                      f"turnover_cost={rc['turnover_cost']:.6f}  concentration_cost={rc['concentration_cost']:.6f}")
+
+            # ── Save position timeseries CSV and plot ──
+            positions = val_metrics.get("positions", [])
+            if positions and len(positions) > 10:
+                csv_path = f"runtime/positions_{ablation_group}_trial{trial_id}.csv"
+                import os
+                os.makedirs("runtime", exist_ok=True)
+                with open(csv_path, "w") as csvf:
+                    print("step,position", file=csvf)
+                    for i, p in enumerate(positions):
+                        print(f"{i},{p:.8f}", file=csvf)
+                try:
+                    import matplotlib
+                    matplotlib.use("Agg")
+                    import matplotlib.pyplot as plt
+                    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 6), gridspec_kw={'height_ratios': [3, 1]})
+                    steps = list(range(len(positions)))
+                    ax1.plot(steps, positions, color="#2196F3", linewidth=0.8, alpha=0.8)
+                    ax1.axhline(y=0, color="gray", linestyle="--", linewidth=0.5, alpha=0.5)
+                    ax1.axhline(y=0.5, color="red", linestyle=":", linewidth=0.5, alpha=0.3, label="conc. penalty threshold")
+                    ax1.axhline(y=-0.5, color="red", linestyle=":", linewidth=0.5, alpha=0.3)
+                    ax1.set_ylabel("Position")
+                    ax1.set_title(f"Position Timeseries — {ablation_group} (trial {trial_id})")
+                    ax1.legend(loc="upper right", fontsize=8)
+                    ax1.grid(True, alpha=0.3)
+                    # Histogram on bottom subplot
+                    ax2.hist(positions, bins=50, color="#2196F3", alpha=0.7, edgecolor="none")
+                    ax2.axvline(x=0, color="gray", linestyle="--", linewidth=0.5)
+                    ax2.set_xlabel("Position")
+                    ax2.set_ylabel("Frequency")
+                    ax2.grid(True, alpha=0.3)
+                    plt.tight_layout()
+                    plot_path = f"runtime/positions_{ablation_group}_trial{trial_id}.png"
+                    plt.savefig(plot_path, dpi=150)
+                    plt.close()
+                    print(f"  [PLOT] Saved to {plot_path}")
+                except Exception as plot_err:
+                    print(f"  [PLOT] Skipped (matplotlib not available?): {plot_err}")
 
     except Exception as exc:
         elapsed = time.time() - start_time
@@ -654,6 +740,7 @@ def _evaluate(
             "action_abs_mean": 0.0,
             "action_entropy": 0.0,
             "turnover_pct": 0.0,
+            "positions": [],
         }
 
     n_features = feature_matrix.shape[1]
@@ -755,6 +842,7 @@ def _evaluate(
         # Turnover — fraction of steps where position changed significantly.
         # Low turnover with low entropy = hold-forever. High turnover = tactical.
         "turnover_pct": round(float(np.mean(position_changes > 0.01)), 6),
+        "positions": positions.tolist(),
     }
 
 
