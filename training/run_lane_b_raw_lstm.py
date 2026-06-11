@@ -14,23 +14,22 @@ CLI args:
 
 Output: runtime/lane_b_raw_all_seeds.csv
 """
-import sys, os, time, warnings, argparse, hashlib
+import sys, os, time, warnings, argparse
 import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, "C:/supreme-chainsaw")
 
-import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from stable_baselines3.common.callbacks import BaseCallback
 import torch
 import torch.nn as nn
 
 from training.run_real_feature_ablation import load_real_data
+from training.taming_shared import BaseTamedEnv, MetricsCallback, compute_weight_hash, evaluate
 
 
 # ── Defaults (overridden by CLI when run directly) ──
@@ -56,38 +55,25 @@ COOLDOWN_STEPS = 5
 
 
 # ── Tamed environment ──
-class TamedOHLCVEnv(gym.Env):
+class TamedOHLCVEnv(BaseTamedEnv):
     """Raw OHLCV environment with EMA smoothing, cooldown, and penalties."""
     def __init__(self, df, window_size=WINDOW_SIZE,
                  turnover_cost=TURNOVER_COST,
                  concentration_penalty=CONCENTRATION_PENALTY,
                  smoothing_alpha=POSITION_SMOOTHING_ALPHA,
                  cooldown_steps=COOLDOWN_STEPS):
-        super().__init__()
         self.df = df.reset_index(drop=True)
-        self.window_size = window_size
-        self.turnover_cost = turnover_cost
-        self.concentration_penalty = concentration_penalty
-        self.smoothing_alpha = smoothing_alpha
-        self.cooldown_steps = cooldown_steps
-        self.n = len(df)
-
+        n = len(self.df)
+        super().__init__(
+            window_size=window_size,
+            turnover_cost=turnover_cost,
+            concentration_penalty=concentration_penalty,
+            smoothing_alpha=smoothing_alpha,
+            cooldown_steps=cooldown_steps,
+            n=n,
+            n_features=N_FEATURES,
+        )
         self._build_features()
-
-        obs_dim = self.window_size * self.features.shape[1]
-        self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
-        )
-        self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
-        )
-
-        self.idx = None
-        self._raw_position = 0.0
-        self._smoothed_position = 0.0
-        self._prev_smoothed = 0.0
-        self._cooldown_until = 0
-        self._step_count = 0
 
     def _build_features(self):
         """Convert OHLCV to normalized log-return features."""
@@ -118,76 +104,13 @@ class TamedOHLCVEnv(gym.Env):
             std = np.std(col_data)
             self.features[:, col] = (col_data - mean) / max(std, 1e-10)
 
-        # Forward return signal
-        self.forward_ret = np.zeros(n, dtype=np.float32)
+        # Forward return signal (cached for _raw_reward_at)
+        self._forward_ret = np.zeros(n, dtype=np.float32)
         for i in range(n - 1):
-            self.forward_ret[i] = (c[i+1] / c[i]) - 1.0
+            self._forward_ret[i] = (c[i+1] / c[i]) - 1.0
 
-    def _apply_cooldown(self, proposed_position):
-        """If in cooldown, prevent zero-crossing."""
-        if self._step_count < self._cooldown_until:
-            if self._prev_smoothed >= 0 and proposed_position < 0:
-                return max(proposed_position, 0.0)
-            if self._prev_smoothed < 0 and proposed_position >= 0:
-                return min(proposed_position, 0.0)
-        return proposed_position
-
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
-        rng = self.np_random if hasattr(self, 'np_random') else np.random
-        self.idx = self.window_size + int(rng.integers(0, max(1, self.n - self.window_size - 2)))
-        self._raw_position = 0.0
-        self._smoothed_position = 0.0
-        self._prev_smoothed = 0.0
-        self._cooldown_until = 0
-        self._step_count = 0
-        return self._get_obs(), {}
-
-    def step(self, action):
-        raw_pos = float(np.clip(action[0], -1.0, 1.0))
-        self._raw_position = raw_pos
-
-        # EMA smoothing
-        raw_smoothed = self.smoothing_alpha * raw_pos + (1 - self.smoothing_alpha) * self._prev_smoothed
-
-        # Flip detection (only if not in cooldown)
-        if self._step_count >= self._cooldown_until and self._prev_smoothed * raw_smoothed < 0:
-            self._cooldown_until = self._step_count + self.cooldown_steps
-
-        # Apply cooldown clamp
-        final_position = self._apply_cooldown(raw_smoothed)
-
-        # Reward
-        raw_reward = self.forward_ret[self.idx]
-        growth = final_position * raw_reward
-        pos_change = abs(final_position - self._prev_smoothed)
-        tc = self.turnover_cost * pos_change
-        cc = self.concentration_penalty * (final_position ** 2)
-        reward = growth - tc - cc
-
-        self._prev_smoothed = final_position
-        self._smoothed_position = final_position
-        self._step_count += 1
-        self.idx += 1
-        done = self.idx >= self.n - 1
-        truncated = False
-
-        info = {
-            "position": float(final_position),
-            "raw_position": float(raw_pos),
-            "raw_reward": float(raw_reward),
-            "growth": float(growth),
-            "turnover_cost": float(tc),
-            "concentration_cost": float(cc),
-            "cooldown": 1 if self._step_count < self._cooldown_until else 0,
-        }
-
-        return self._get_obs(), reward, done, truncated, info
-
-    def _get_obs(self):
-        start = self.idx - self.window_size
-        window = self.features[start:self.idx].flatten()
-        return window.astype(np.float32)
+    def _raw_reward_at(self, idx):
+        return self._forward_ret[idx]
 
 
 # ── LSTM feature extractor ──
@@ -217,86 +140,6 @@ class LSTMFeatureExtractor(BaseFeaturesExtractor):
         last = lstm_out[:, -1, :]
         return self.projection(last)
 
-
-class MetricsCallback(BaseCallback):
-    def __init__(self):
-        super().__init__()
-        self.positions = []
-        self.rewards = []
-        self.episode_rewards = []
-
-    def _on_step(self) -> bool:
-        infos = self.locals.get("infos", [{}])
-        for info in infos:
-            if "position" in info:
-                self.positions.append(info["position"])
-            if "raw_reward" in info:
-                self.rewards.append(info["raw_reward"])
-            if "episode" in info:
-                self.episode_rewards.append(info["episode"]["r"])
-        return True
-
-
-# ── Evaluation function ──
-def evaluate(model, val_df, window_size=WINDOW_SIZE):
-    """Run deterministic evaluation, return metrics dict."""
-    val_env = TamedOHLCVEnv(val_df, window_size=window_size)
-    obs, _ = val_env.reset()
-    val_positions = []
-    val_rewards = []
-    val_raw_rewards = []
-    val_net_worths = [10000.0]
-    done = False
-    step = 0
-    max_steps = len(val_df) - window_size - 2
-
-    while not done and step < max_steps:
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = val_env.step(action)
-        done = terminated or truncated
-        val_positions.append(info["position"])
-        val_rewards.append(reward)
-        val_raw_rewards.append(info["raw_reward"])
-        val_net_worths.append(val_net_worths[-1] * (1 + info["raw_reward"] * info["position"]))
-        step += 1
-
-    pos = np.array(val_positions)
-    rw = np.array(val_rewards)
-    raw = np.array(val_raw_rewards)
-    nw = np.array(val_net_worths)
-    total_ret = (nw[-1] / nw[0] - 1) * 100
-
-    strat_returns = raw * pos
-    sharpe_ann = 0.0
-    if np.std(strat_returns) > 1e-10 and len(strat_returns) > 1:
-        sharpe_ann = float(np.mean(strat_returns) / np.std(strat_returns) * np.sqrt(252 * 288))
-
-    turnover = 0.0
-    if len(pos) > 1:
-        turnover = float(np.mean(np.abs(np.diff(pos)) > 0.01) * 100)
-
-    peak = np.maximum.accumulate(nw)
-    dd = (nw - peak) / peak * 100
-    max_dd = float(np.min(dd))
-
-    # Hashes for reproducibility verification
-    action_hash = hashlib.md5(pos.tobytes()).hexdigest()[:12] if len(pos) > 0 else "none"
-
-    return {
-        "pos_mean": float(np.mean(pos)),
-        "pos_std": float(np.std(pos)),
-        "long_pct": float(np.mean(pos > 0.01) * 100),
-        "short_pct": float(np.mean(pos < -0.01) * 100),
-        "flat_pct": float(np.mean(np.abs(pos) <= 0.01) * 100),
-        "sharpe": sharpe_ann,
-        "total_return": total_ret,
-        "max_drawdown": max_dd,
-        "turnover": turnover,
-        "n_steps": len(pos),
-        "action_hash": action_hash,
-        "positions": pos,
-        "net_worth": nw,
-    }
 
 
 # ── Train one seed ──
@@ -337,14 +180,6 @@ def train_seed(seed, train_df):
     cb = MetricsCallback()
     model.learn(total_timesteps=N_STEPS, callback=cb)
     return model, cb
-
-
-def compute_weight_hash(model):
-    """Return a short hash of the model's policy network weights."""
-    hasher = hashlib.md5()
-    for name, param in model.policy.state_dict().items():
-        hasher.update(param.cpu().numpy().tobytes())
-    return hasher.hexdigest()[:12]
 
 
 # ── CLI parsing + main (only runs when executed directly) ──
@@ -425,7 +260,7 @@ def main():
               f"flat%={train_metrics['flat_pct']:.1f}")
 
         # Validation
-        val_metrics = evaluate(model, val_df)
+        val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE))
         val_metrics["weight_hash"] = compute_weight_hash(model)
         all_val_metrics.append(val_metrics)
         all_positions.append(val_metrics["positions"])

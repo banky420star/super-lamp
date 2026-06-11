@@ -14,23 +14,22 @@ CLI args:
 
 Output: runtime/lane_a_all_seeds.csv
 """
-import sys, os, time, warnings, argparse, hashlib
+import sys, os, time, warnings, argparse
 import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, "C:/supreme-chainsaw")
 
-import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from stable_baselines3.common.callbacks import BaseCallback
 import torch
 import torch.nn as nn
 
 from training.run_real_feature_ablation import load_real_data, compute_reward_signal, build_real_features
+from training.taming_shared import BaseTamedEnv, MetricsCallback, compute_weight_hash, evaluate
 
 # ── Defaults (overridden by CLI when run directly) ──
 SYMBOL = "XAUUSDm"
@@ -71,7 +70,7 @@ def clean_features(features):
     return cleaned, keep_cols
 
 
-class FixedFeatureEnv(gym.Env):
+class FixedFeatureEnv(BaseTamedEnv):
     """
     Feature-matrix environment with taming (same as Lane B):
       - Higher turnover + concentration penalties
@@ -84,96 +83,24 @@ class FixedFeatureEnv(gym.Env):
                  concentration_penalty=CONCENTRATION_PENALTY,
                  smoothing_alpha=SMOOTHING_ALPHA,
                  cooldown_steps=COOLDOWN_STEPS):
-        super().__init__()
-        self.feature_matrix = feature_matrix.astype(np.float32)
-        self.signal = signal.astype(np.float32)
-        self.window_size = window_size
-        self.turnover_cost = turnover_cost
-        self.concentration_penalty = concentration_penalty
-        self.smoothing_alpha = smoothing_alpha
-        self.cooldown_steps = cooldown_steps
-        self.n = len(feature_matrix)
-        self.n_features = feature_matrix.shape[1]
-
-        obs_dim = self.window_size * self.n_features
-        self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
+        self._feature_matrix = feature_matrix.astype(np.float32)
+        self._signal = signal.astype(np.float32)
+        super().__init__(
+            window_size=window_size,
+            turnover_cost=turnover_cost,
+            concentration_penalty=concentration_penalty,
+            smoothing_alpha=smoothing_alpha,
+            cooldown_steps=cooldown_steps,
+            n=len(feature_matrix),
+            n_features=feature_matrix.shape[1],
         )
-        self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
-        )
+        self._build_features()
 
-        self.idx = None
-        self._smoothed_position = 0.0
-        self._prev_smoothed = 0.0
-        self._cooldown_until = 0
-        self._step_count = 0
+    def _build_features(self):
+        self.features = self._feature_matrix
 
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
-        rng = self.np_random if hasattr(self, 'np_random') else np.random
-        max_start = max(1, self.n - self.window_size - 2)
-        self.idx = self.window_size + int(rng.integers(0, max_start))
-        self._smoothed_position = 0.0
-        self._prev_smoothed = 0.0
-        self._cooldown_until = 0
-        self._step_count = 0
-        return self._get_obs(), {}
-
-    def _apply_cooldown(self, proposed_position):
-        if self._step_count < self._cooldown_until:
-            if self._prev_smoothed >= 0 and proposed_position < 0:
-                return max(proposed_position, 0.0)
-            if self._prev_smoothed < 0 and proposed_position >= 0:
-                return min(proposed_position, 0.0)
-        return proposed_position
-
-    def step(self, action):
-        raw_pos = float(np.clip(action[0], -1.0, 1.0))
-
-        # EMA smoothing
-        raw_smoothed = (self.smoothing_alpha * raw_pos +
-                        (1 - self.smoothing_alpha) * self._prev_smoothed)
-
-        # Flip detection (only if not in cooldown)
-        if (self._step_count >= self._cooldown_until and
-            self._prev_smoothed * raw_smoothed < 0):
-            self._cooldown_until = self._step_count + self.cooldown_steps
-
-        # Apply cooldown
-        final_position = self._apply_cooldown(raw_smoothed)
-
-        # Reward
-        raw_reward = float(self.signal[self.idx]) if self.idx < len(self.signal) else 0.0
-        growth = final_position * raw_reward
-        pos_change = abs(final_position - self._prev_smoothed)
-        tc = self.turnover_cost * pos_change
-        cc = self.concentration_penalty * (final_position ** 2)
-        reward = growth - tc - cc
-
-        self._prev_smoothed = final_position
-        self._smoothed_position = final_position
-        self._step_count += 1
-        self.idx += 1
-        done = self.idx >= self.n - 1
-        truncated = False
-
-        info = {
-            "position": float(final_position),
-            "raw_position": float(raw_pos),
-            "raw_reward": float(raw_reward),
-            "growth": float(growth),
-            "turnover_cost": float(tc),
-            "concentration_cost": float(cc),
-            "cooldown": 1 if self._step_count < self._cooldown_until else 0,
-        }
-
-        return self._get_obs(), reward, done, truncated, info
-
-    def _get_obs(self):
-        start = self.idx - self.window_size
-        window = self.feature_matrix[start:self.idx].flatten()
-        return window.astype(np.float32)
+    def _raw_reward_at(self, idx):
+        return float(self._signal[idx]) if idx < len(self._signal) else 0.0
 
 
 class LSTMFeatureExtractor(BaseFeaturesExtractor):
@@ -205,93 +132,6 @@ class LSTMFeatureExtractor(BaseFeaturesExtractor):
         last = lstm_out[:, -1, :]
         return self.projection(last)
 
-
-class MetricsCallback(BaseCallback):
-    def __init__(self):
-        super().__init__()
-        self.positions = []
-        self.rewards = []
-        self.episode_rewards = []
-
-    def _on_step(self) -> bool:
-        infos = self.locals.get("infos", [{}])
-        for info in infos:
-            if "position" in info:
-                self.positions.append(info["position"])
-            if "raw_reward" in info:
-                self.rewards.append(info["raw_reward"])
-            if "episode" in info:
-                self.episode_rewards.append(info["episode"]["r"])
-        return True
-
-
-def evaluate(model, val_features, val_signal, window_size=WINDOW_SIZE):
-    """Deterministic evaluation on validation data, return metrics dict."""
-    val_env = FixedFeatureEnv(val_features, val_signal, window_size=window_size)
-    obs, _ = val_env.reset()
-    positions = []
-    rewards = []
-    rews = []
-    net_worth = [10000.0]
-    done = False
-    step = 0
-    max_steps = max(0, len(val_features) - window_size - 2)
-
-    while not done and step < max_steps:
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = val_env.step(action)
-        done = terminated or truncated
-        positions.append(info["position"])
-        rewards.append(reward)
-        rews.append(info["raw_reward"])
-        net_worth.append(net_worth[-1] * (1 + info["raw_reward"] * info["position"]))
-        step += 1
-
-    pos = np.array(positions)
-    rw = np.array(rewards)
-    raw = np.array(rews)
-    nw = np.array(net_worth)
-    total_ret = (nw[-1] / nw[0] - 1) * 100 if len(nw) > 1 else 0
-
-    strat_returns = raw * pos
-    sharpe = 0.0
-    if np.std(strat_returns) > 1e-10 and len(strat_returns) > 1:
-        sharpe = float(np.mean(strat_returns) / np.std(strat_returns) * np.sqrt(252 * 288))
-
-    turnover = 0.0
-    if len(pos) > 1:
-        turnover = float(np.mean(np.abs(np.diff(pos)) > 0.01) * 100)
-
-    peak = np.maximum.accumulate(nw)
-    dd = (nw - peak) / peak * 100
-    max_dd = float(np.min(dd)) if len(dd) > 0 else 0
-
-    # Hashes for reproducibility verification
-    action_hash = hashlib.md5(pos.tobytes()).hexdigest()[:12] if len(pos) > 0 else "none"
-
-    return {
-        "pos_mean": float(np.mean(pos)),
-        "pos_std": float(np.std(pos)),
-        "long_pct": float(np.mean(pos > 0.01) * 100),
-        "short_pct": float(np.mean(pos < -0.01) * 100),
-        "flat_pct": float(np.mean(np.abs(pos) <= 0.01) * 100),
-        "sharpe": sharpe,
-        "total_return": total_ret,
-        "max_drawdown": max_dd,
-        "turnover": turnover,
-        "n_steps": len(pos),
-        "action_hash": action_hash,
-        "positions": pos,
-        "net_worth": nw,
-    }
-
-
-def compute_weight_hash(model):
-    """Return a short hash of the model's policy network weights."""
-    hasher = hashlib.md5()
-    for name, param in model.policy.state_dict().items():
-        hasher.update(param.cpu().numpy().tobytes())
-    return hasher.hexdigest()[:12]
 
 
 def train_seed(seed, train_features, train_signal):
@@ -411,7 +251,7 @@ def main():
         print(f"    Train: {train_m['long_pct']:.1f}%L / {train_m['short_pct']:.1f}%S / {train_m['flat_pct']:.1f}%F")
 
         # Validation
-        val_m = evaluate(model, val_f, val_s)
+        val_m = evaluate(model, lambda: FixedFeatureEnv(val_f, val_s, window_size=WINDOW_SIZE))
         val_m["weight_hash"] = compute_weight_hash(model)
         all_val.append(val_m)
         all_positions.append(val_m.pop("positions"))
