@@ -30,6 +30,7 @@ DEFAULT_SMOOTHING_ALPHA = 0.3
 DEFAULT_COOLDOWN_STEPS = 5
 DEFAULT_WINDOW_SIZE = 64
 DEFAULT_REWARD_SCALE = 1000.0  # scale raw returns (~0.001) to PPO-friendly range (~1.0)
+DEFAULT_HOLDING_PENALTY = 0.0  # penalty per step for holding same direction (0 = disabled)
 
 
 class BaseTamedEnv(gym.Env):
@@ -38,11 +39,16 @@ class BaseTamedEnv(gym.Env):
 
     Subclasses must implement:
         _build_features()     — set self.features (np.ndarray, shape (n, n_features))
-        _raw_reward_at(idx)   — return the raw forward return at the given index
+        _raw_reward_at(idx)   — return the reward used for PPO training (may be demeaned)
+
+    Subclasses may override:
+        _eval_reward_at(idx)  — return the ACTUAL forward return for P&L evaluation
+                                (defaults to _raw_reward_at for backward compat)
     """
     def __init__(self, *, window_size, turnover_cost, concentration_penalty,
                  smoothing_alpha, cooldown_steps, n, n_features,
-                 reward_scale=DEFAULT_REWARD_SCALE):
+                 reward_scale=DEFAULT_REWARD_SCALE,
+                 holding_penalty=DEFAULT_HOLDING_PENALTY):
         super().__init__()
         self.window_size = window_size
         self.turnover_cost = turnover_cost
@@ -52,6 +58,7 @@ class BaseTamedEnv(gym.Env):
         self.n = n
         self.n_features = n_features
         self.reward_scale = reward_scale
+        self.holding_penalty = holding_penalty
 
         obs_dim = self.window_size * self.n_features
         self.observation_space = spaces.Box(
@@ -74,8 +81,17 @@ class BaseTamedEnv(gym.Env):
         raise NotImplementedError
 
     def _raw_reward_at(self, idx):
-        """Return the raw forward return at the given index."""
+        """Return the reward used for PPO training (may be demeaned/excess return)."""
         raise NotImplementedError
+
+    def _eval_reward_at(self, idx):
+        """Return the ACTUAL forward return for P&L evaluation.
+
+        Override this when training reward differs from actual returns
+        (e.g., demeaned reward for training vs raw returns for eval).
+        Default: same as _raw_reward_at (for backward compat).
+        """
+        return self._raw_reward_at(idx)
 
     # ── Shared taming logic ──
 
@@ -113,11 +129,15 @@ class BaseTamedEnv(gym.Env):
 
         # Reward (scaled for PPO stability: raw returns ~0.001 → ~1.0)
         raw_reward = self._raw_reward_at(self.idx)
+        eval_reward = self._eval_reward_at(self.idx)  # actual return for P&L
         growth = final_position * raw_reward
         pos_change = abs(final_position - self._prev_smoothed)
         tc = self.turnover_cost * pos_change
         cc = self.concentration_penalty * (final_position ** 2)
-        reward = (growth - tc - cc) * self.reward_scale
+        # Holding penalty: discourage staying in one direction forever
+        hp = self.holding_penalty if (self.holding_penalty > 0 and 
+              abs(final_position) > 0.3 and abs(pos_change) < 0.01) else 0.0
+        reward = (growth - tc - cc - hp) * self.reward_scale
 
         self._prev_smoothed = final_position
         self._step_count += 1
@@ -129,6 +149,7 @@ class BaseTamedEnv(gym.Env):
             "position": float(final_position),
             "raw_position": float(raw_pos),
             "raw_reward": float(raw_reward),
+            "eval_reward": float(eval_reward),
             "growth": float(growth),
             "turnover_cost": float(tc),
             "concentration_cost": float(cc),
@@ -209,7 +230,9 @@ def evaluate(model, env_factory, annualization_factor=252 * 288, turnover_cost=0
         pos_now = info["position"]
         # Deduct turnover cost from net worth (honest evaluation)
         tc = turnover_cost * abs(pos_now - prev_position)
-        nw_growth = 1.0 + info["raw_reward"] * pos_now - tc
+        # Use eval_reward (actual returns) for honest P&L, fall back to raw_reward
+        actual_return = info.get("eval_reward", info["raw_reward"])
+        nw_growth = 1.0 + actual_return * pos_now - tc
         net_worth.append(net_worth[-1] * max(nw_growth, 0.0))
         prev_position = pos_now
         positions.append(pos_now)
