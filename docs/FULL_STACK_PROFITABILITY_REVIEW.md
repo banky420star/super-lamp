@@ -82,13 +82,13 @@
 - Promotion gates: `Python/registry/promotion_gates.py`
 - CI triggers on `experiment/**` branches (compile + core tests).
 
-**Status (staying on `feature/profitability-tier0-reward` branch as requested):**
-- GitHub hygiene setup on separate branch, then profitability work isolated here.
-- Tier 0 in progress on this branch:
-  - TradingReward 100% primary (drl/trading_env.py) — committed.
-  - Configs/XAUUSDm.yaml updated: ent_coef=0.02 (more exploration), feature_version=ultimate_150, explicit use_trend_momentum_bias + use_mtf, dead columns noted.
-  - train_drl.py updated to pass use_trend_momentum_bias=True by default (via AGI_USE_TREND_MOMENTUM_BIAS env, default on). This wires the "momentum and trend features as a layer before the rest".
-- Next on this branch: run updated sanity as gate, small controlled XAU run (20-30k steps), update review with metrics.
-- All changes pushed to this branch only. No switching.
+**Status (staying strictly on `feature/profitability-tier0-reward` as requested — no other branches touched for this work):**
+- GitHub hygiene was on a separate branch; all profitability Tier 0 changes committed/pushed here only.
+- On this branch:
+  - TradingReward is now 100% primary in drl/trading_env.py (the 80/20 blend is gone).
+  - Config + train_drl.py: MTF + TrendMomentumBiasLayer defaults enabled for XAU (plus ent_coef bump and dead-column notes).
+  - tools/reward_sanity_check.py enhanced into a real gate (main env first, --gate mode, tunable margin/slices). Tuned runs with AGI_* vars still show "RISK" on recent slices → honest signal that we need the full MTF data or more aggressive tuning before big runs.
+- All verification, commits, and pushes stayed on feature/profitability-tier0-reward.
+- Ready for next step on this exact branch: small controlled XAU experiment (20-30k steps) using the new reward + bias + tuned env vars, then update this doc with flat%/turnover/Sharpe numbers.
 
 This review is living documentation. Update it as experiments produce measurable OOS improvements after costs.
