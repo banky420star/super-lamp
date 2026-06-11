@@ -82,6 +82,12 @@
 - Promotion gates: `Python/registry/promotion_gates.py`
 - CI triggers on `experiment/**` branches (compile + core tests).
 
-**Status:** Work pushed to `experiment/xauusd-regime-baseline`. Create PR against main when a concrete profitable delta is validated locally.
+**Status:** 
+- GitHub hygiene setup complete on `feature/github-setup-hygiene`.
+- Tier 0 started on `feature/profitability-tier0-reward`:
+  - TradingReward is now 100% primary in `drl/trading_env.py` (the 80/20 blend removed).
+  - New dedicated branch + push hygiene followed.
+- Next: enable MTF + bias layer defaults, make sanity_check a hard gate, small controlled runs comparing flat% / Sharpe / turnover vs baseline.
+- Update this doc with results after each experiment.
 
 This review is living documentation. Update it as experiments produce measurable OOS improvements after costs.

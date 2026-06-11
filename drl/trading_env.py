@@ -1268,10 +1268,16 @@ class TradingEnv(gym.Env):
                 major_open_window=getattr(self, "last_major_open_window", 0.0),
                 news_avoidance_zone=getattr(self, "last_news_avoidance", 0.0),
             )
-            # Blend: use class pnl_after_costs term + our shaped bonuses/penalties (conservative rollout)
-            reward = 0.8 * tr_out["reward"] + 0.2 * shaped_reward
+            # TIER 0 PROFITABILITY FIX: Use the rich TradingReward as 100% primary.
+            # This gives the policy the full benefit of:
+            # - explicit spread/commission/slippage
+            # - anti-HOLD entry bonus + hold persist penalty
+            # - asymmetric loss (Xia 2023), DSR, vol-adjusted costs, news timing, etc.
+            # The old shaped_reward (legacy bonuses/penalties) is kept only for telemetry.
+            # See docs/FULL_STACK_PROFITABILITY_REVIEW.md and Python/rewards/reward_function.py
+            reward = tr_out["reward"]
         except Exception:
-            reward = shaped_reward  # fall back to shaped reward on any issue
+            reward = shaped_reward  # fall back only on total failure (should be rare now)
 
         # V20: accumulate reward component stats
         try:
