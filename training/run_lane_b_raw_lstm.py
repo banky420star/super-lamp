@@ -46,7 +46,7 @@ from training.taming_shared import BaseTamedEnv, MetricsCallback, compute_weight
 SYMBOL = "XAUUSDm"
 N_BARS = 100000
 N_STEPS = 50000
-SEEDS = [42, 123, 456]
+SEEDS = [42, 123, 456, 789, 234, 567, 890, 345]
 TIMEFRAME = "M5"
 
 
@@ -422,8 +422,8 @@ def main():
         for j in range(len(pos)):
             all_data.append({"seed": seed, "step": j, "position": pos[j],
                              "net_worth": nw[min(j+1, len(nw)-1)]})
-    pd.DataFrame(all_data).to_csv("runtime/lane_b_raw_all_seeds.csv", index=False)
-    print(f"\n  CSV: runtime/lane_b_raw_all_seeds.csv")
+    pd.DataFrame(all_data).to_csv("runtime/lane_b_raw_8seeds.csv", index=False)
+    print(f"\n  CSV: runtime/lane_b_raw_8seeds.csv")
 
     # Plot
     try:
@@ -446,11 +446,11 @@ def main():
             ax2.grid(alpha=0.3)
         axes[-1, 0].set_xlabel("Validation step")
         axes[-1, 1].set_xlabel("Validation step")
-        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 3: Discrete + Symmetry, Raw Returns (M5)", fontsize=13)
+        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 3: Discrete + Symmetry, Raw Returns, 8 Seeds (M5)", fontsize=13)
         plt.tight_layout()
-        plt.savefig("runtime/lane_b_raw_all_seeds.png", dpi=150)
+        plt.savefig("runtime/lane_b_raw_8seeds.png", dpi=150)
         plt.close()
-        print(f"  Plot: runtime/lane_b_raw_all_seeds.png")
+        print(f"  Plot: runtime/lane_b_raw_8seeds.png")
     except Exception as e:
         print(f"  Plot failed: {e}")
 
