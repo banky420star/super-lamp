@@ -31,6 +31,7 @@ DEFAULT_COOLDOWN_STEPS = 5
 DEFAULT_WINDOW_SIZE = 64
 DEFAULT_REWARD_SCALE = 1000.0  # scale raw returns (~0.001) to PPO-friendly range (~1.0)
 DEFAULT_HOLDING_PENALTY = 0.0  # penalty per step for holding same direction (0 = disabled)
+DEFAULT_INACTIVITY_PENALTY = 0.0  # penalty per step for staying flat (0 = disabled)
 
 
 class BaseTamedEnv(gym.Env):
@@ -44,11 +45,19 @@ class BaseTamedEnv(gym.Env):
     Subclasses may override:
         _eval_reward_at(idx)  — return the ACTUAL forward return for P&L evaluation
                                 (defaults to _raw_reward_at for backward compat)
+
+    Parameters
+    ----------
+    discrete : bool
+        If True, use Discrete(3) action space [Long, Flat, Short] with no EMA smoothing.
+        If False (default), use continuous Box(-1,1) with EMA smoothing.
     """
     def __init__(self, *, window_size, turnover_cost, concentration_penalty,
                  smoothing_alpha, cooldown_steps, n, n_features,
                  reward_scale=DEFAULT_REWARD_SCALE,
-                 holding_penalty=DEFAULT_HOLDING_PENALTY):
+                 holding_penalty=DEFAULT_HOLDING_PENALTY,
+                 inactivity_penalty=DEFAULT_INACTIVITY_PENALTY,
+                 discrete=False):
         super().__init__()
         self.window_size = window_size
         self.turnover_cost = turnover_cost
@@ -59,14 +68,20 @@ class BaseTamedEnv(gym.Env):
         self.n_features = n_features
         self.reward_scale = reward_scale
         self.holding_penalty = holding_penalty
+        self.inactivity_penalty = inactivity_penalty
+        self.discrete = discrete
 
         obs_dim = self.window_size * self.n_features
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
-        self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
-        )
+        if self.discrete:
+            # 0=Long, 1=Flat, 2=Short
+            self.action_space = spaces.Discrete(3)
+        else:
+            self.action_space = spaces.Box(
+                low=-1.0, high=1.0, shape=(1,), dtype=np.float32
+            )
 
         self.idx = None
         self._prev_smoothed = 0.0
@@ -115,10 +130,16 @@ class BaseTamedEnv(gym.Env):
         return self._get_obs(), {}
 
     def step(self, action):
-        raw_pos = float(np.clip(action[0], -1.0, 1.0))
-
-        # EMA smoothing
-        smoothed = self.smoothing_alpha * raw_pos + (1 - self.smoothing_alpha) * self._prev_smoothed
+        if self.discrete:
+            # Discrete: 0=Long(+1.0), 1=Flat(0.0), 2=Short(-1.0)
+            action_map = {0: 1.0, 1: 0.0, 2: -1.0}
+            raw_pos = action_map.get(int(action), 0.0)
+            # No EMA smoothing for discrete — output directly, no inertia
+            smoothed = raw_pos
+        else:
+            raw_pos = float(np.clip(action[0], -1.0, 1.0))
+            # EMA smoothing
+            smoothed = self.smoothing_alpha * raw_pos + (1 - self.smoothing_alpha) * self._prev_smoothed
 
         # Flip detection (only if not already in cooldown)
         if self._step_count >= self._cooldown_until and self._prev_smoothed * smoothed < 0:
@@ -127,7 +148,7 @@ class BaseTamedEnv(gym.Env):
         # Apply cooldown clamp
         final_position = self._apply_cooldown(smoothed)
 
-        # Reward (scaled for PPO stability: raw returns ~0.001 → ~1.0)
+        # Reward (scaled for PPO stability: raw returns ~0.001 -> ~1.0)
         raw_reward = self._raw_reward_at(self.idx)
         eval_reward = self._eval_reward_at(self.idx)  # actual return for P&L
         growth = final_position * raw_reward
@@ -135,9 +156,12 @@ class BaseTamedEnv(gym.Env):
         tc = self.turnover_cost * pos_change
         cc = self.concentration_penalty * (final_position ** 2)
         # Holding penalty: discourage staying in one direction forever
-        hp = self.holding_penalty if (self.holding_penalty > 0 and 
+        hp = self.holding_penalty if (self.holding_penalty > 0 and
               abs(final_position) > 0.3 and abs(pos_change) < 0.01) else 0.0
-        reward = (growth - tc - cc - hp) * self.reward_scale
+        # Inactivity penalty: discourage staying flat — forces model to take positions
+        ip = self.inactivity_penalty if (self.inactivity_penalty > 0 and
+              abs(final_position) < 0.01) else 0.0
+        reward = (growth - tc - cc - hp - ip) * self.reward_scale
 
         self._prev_smoothed = final_position
         self._step_count += 1

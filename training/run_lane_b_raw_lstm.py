@@ -1,11 +1,15 @@
 """
 Lane B: Tamed Raw OHLCV + LSTM PPO — 3-seed walk-forward validation.
 
-Tier 2 fixes (Jun 2026):
-  - Demeaned reward: excess over 100-bar rolling mean (forces alpha, not trend-riding)
-  - Stationary features: RSI(14) + MACD histogram added to OHLCV + session
-  - Zero turnover cost: removed the trap that locked model into one direction
-  - Holding penalty: small penalty for consecutive same-direction bars
+Tier 3 fixes (Jun 2026):
+  - Discrete actions: Long(+1) / Flat(0) / Short(-1) — prevents Gaussian collapse
+  - No EMA smoothing — removes action inertia
+  - Market symmetry: inverted price series concatenated (2x training bars)
+  - No session features (they were spurious row-number regime detectors)
+  - Raw 5-bar forward returns (not demeaned — market symmetry handles trend bias)
+  - Inactivity penalty: small cost for staying flat, forces model to take positions
+  - Higher ent_coef (0.05) for discrete exploration
+  - RSI(14) + MACD histogram features
 
 Usage:
     python training/run_lane_b_raw_lstm.py
@@ -47,33 +51,31 @@ TIMEFRAME = "M5"
 
 
 # ── Fixed config (not CLI-overridable) ──
-N_FEATURES = 11         # 5 OHLCV + 4 session + 1 RSI + 1 MACD histogram
+N_FEATURES = 7          # 5 OHLCV log-returns + 1 RSI + 1 MACD histogram
 WINDOW_SIZE = 64        # 64 x 5min = 320min ~ 5.3 hours of context
 HIDDEN_SIZE = 128
 N_LSTM_LAYERS = 2
 FEATURES_DIM = 64
 
 # Taming parameters
-TURNOVER_COST = 0.0           # ZERO — removed the trap that locked model into one direction
-CONCENTRATION_PENALTY = 0.002
-POSITION_SMOOTHING_ALPHA = 0.3
+TURNOVER_COST = 0.0           # zero — removed direction trap
+CONCENTRATION_PENALTY = 0.0   # zero for discrete — no "extreme position" problem with Long/Flat/Short
 COOLDOWN_STEPS = 5
 REWARD_HORIZON = 5            # predict 5-bar forward return
 REWARD_SCALE = 1000.0         # scale raw returns (~0.001) to PPO-friendly range (~1.0)
-DEMEAN_WINDOW = 100           # rolling window for reward demeaning (excess over trend)
-HOLDING_PENALTY = 0.00005     # small penalty per step when holding > 0.3 position unchanged
+INACTIVITY_PENALTY = 0.0003   # cost for staying flat (0.0003*1000 = 0.3 in reward space)
+HOLDING_PENALTY = 0.00005     # small penalty when holding > 0.3 position unchanged
+ENT_COEF = 0.05               # higher entropy for discrete actions
 
 
 # ── Tamed environment ──
 class TamedOHLCVEnv(BaseTamedEnv):
-    """Raw OHLCV + session + RSI + MACD environment with demeaned reward."""
+    """Discrete-action env: OHLCV + RSI + MACD with raw forward returns + inactivity penalty."""
     def __init__(self, df, window_size=WINDOW_SIZE,
                  turnover_cost=TURNOVER_COST,
                  concentration_penalty=CONCENTRATION_PENALTY,
-                 smoothing_alpha=POSITION_SMOOTHING_ALPHA,
+                 smoothing_alpha=0.3,
                  cooldown_steps=COOLDOWN_STEPS):
-        # Store timestamps before reset_index destroys them
-        self._timestamps = df.index.copy()
         self.df = df.reset_index(drop=True)
         n = len(self.df)
         super().__init__(
@@ -86,11 +88,13 @@ class TamedOHLCVEnv(BaseTamedEnv):
             n_features=N_FEATURES,
             reward_scale=REWARD_SCALE,
             holding_penalty=HOLDING_PENALTY,
+            inactivity_penalty=INACTIVITY_PENALTY,
+            discrete=True,  # Tier 3: Long/Flat/Short, no EMA
         )
         self._build_features()
 
     def _build_features(self):
-        """Build features: OHLCV log-returns, session encoding, RSI, MACD histogram, demeaned H-bar signal."""
+        """Build features: OHLCV log-returns, RSI(14), MACD histogram, H-bar forward signal."""
         o = self.df["open"].values.astype(np.float64)
         h = self.df["high"].values.astype(np.float64)
         l = self.df["low"].values.astype(np.float64)
@@ -111,22 +115,7 @@ class TamedOHLCVEnv(BaseTamedEnv):
             ohlcv[i, 3] = np.log(c[i] / c[i-1]) if c[i-1] > 0 else 0.0
             ohlcv[i, 4] = np.log(v[i] / v[i-1]) if v[i-1] > 0 else 0.0
 
-        # ── Session encoding (columns 5-8, NOT z-scored — already in [-1,1]) ──
-        session = np.zeros((n, 4), dtype=np.float32)
-        try:
-            timestamps = pd.to_datetime(self._timestamps)
-            for i in range(n):
-                ts = timestamps[i]
-                hour = ts.hour + ts.minute / 60.0
-                dow = ts.dayofweek
-                session[i, 0] = np.sin(2 * np.pi * hour / 24)
-                session[i, 1] = np.cos(2 * np.pi * hour / 24)
-                session[i, 2] = np.sin(2 * np.pi * dow / 5)
-                session[i, 3] = np.cos(2 * np.pi * dow / 5)
-        except Exception:
-            pass  # no datetime index -> session features stay at 0
-
-        # ── RSI(14) — column 9 ──
+        # ── RSI(14) — column 5 ──
         rsi = np.zeros(n, dtype=np.float32)
         delta = np.diff(c, prepend=c[0])
         gains = np.maximum(delta, 0.0)
@@ -141,7 +130,7 @@ class TamedOHLCVEnv(BaseTamedEnv):
                 rs = avg_gain / avg_loss
                 rsi[i] = 100.0 - 100.0 / (1.0 + rs)
 
-        # ── MACD histogram — column 10 ──
+        # ── MACD histogram — column 6 ──
         alpha12 = 2.0 / 13.0
         alpha26 = 2.0 / 27.0
         ema12 = np.zeros(n, dtype=np.float64)
@@ -159,7 +148,7 @@ class TamedOHLCVEnv(BaseTamedEnv):
             signal_line[i] = alpha_sig * macd_line[i] + (1.0 - alpha_sig) * signal_line[i-1]
         macd_hist = macd_line - signal_line
 
-        # Normalize MACD histogram by price level for comparability across regimes
+        # Normalize MACD histogram by price level
         macd_hist_norm = np.zeros(n, dtype=np.float32)
         for i in range(n):
             denom = max(c[i], 1.0)
@@ -167,36 +156,27 @@ class TamedOHLCVEnv(BaseTamedEnv):
 
         # ── Combine all features ──
         raw_features = np.zeros((n, N_FEATURES), dtype=np.float32)
-        raw_features[:, 0:5] = ohlcv       # OHLCV log returns
-        raw_features[:, 5:9] = session     # session sin/cos
-        raw_features[:, 9] = rsi           # RSI(14)
-        raw_features[:, 10] = macd_hist_norm  # MACD histogram / price
+        raw_features[:, 0:5] = ohlcv          # OHLCV log returns
+        raw_features[:, 5] = rsi              # RSI(14)
+        raw_features[:, 6] = macd_hist_norm   # MACD histogram / price
 
-        # Z-score normalize non-session columns (0-4, 9-10)
+        # Z-score normalize all features
         self.features = raw_features.copy()
-        zscore_cols = [0, 1, 2, 3, 4, 9, 10]
-        for col in zscore_cols:
+        for col in range(N_FEATURES):
             col_data = raw_features[:, col]
             mean = np.mean(col_data)
             std = np.std(col_data)
             self.features[:, col] = (col_data - mean) / max(std, 1e-10)
 
-        # ── H-bar forward return (raw) ──
+        # ── H-bar forward return (raw, no demeaning) ──
+        # Market symmetry (real + inverted data) handles trend bias —
+        # the model must use RSI/MACD features to decide direction
         self._forward_ret = np.zeros(n, dtype=np.float32)
         for i in range(n - H):
             self._forward_ret[i] = float((c[i+H] / c[i]) - 1.0)
 
-        # ── Rolling mean for demeaned reward (lookback only, no future leak) ──
-        self._forward_mean = np.zeros(n, dtype=np.float32)
-        for i in range(DEMEAN_WINDOW, n):
-            self._forward_mean[i] = float(np.mean(self._forward_ret[i - DEMEAN_WINDOW : i]))
-
     def _raw_reward_at(self, idx):
-        """Excess return over rolling mean — forces the model to find alpha, not ride the trend."""
-        return self._forward_ret[idx] - self._forward_mean[idx]
-
-    def _eval_reward_at(self, idx):
-        """ACTUAL forward return for honest P&L evaluation (not demeaned)."""
+        """Raw forward return — market symmetry removes directional bias."""
         return self._forward_ret[idx]
 
 
@@ -228,14 +208,39 @@ class LSTMFeatureExtractor(BaseFeaturesExtractor):
         return self.projection(last)
 
 
+# ── Market symmetry augmentation ──
+def make_inverted_df(df):
+    """Create a mirror-image dataset where uptrends become downtrends and vice versa.
+
+    This forces the model to use features (RSI, MACD) rather than simply
+    riding the dataset's global trend. A 100% short strategy will have zero
+    expected return when trained on both real and inverted data.
+    """
+    inverted = df.copy()
+    mean_price = float(df["close"].mean())
+    for col in ["open", "high", "low", "close"]:
+        inverted[col] = 2.0 * mean_price - df[col].values
+    # Swap high/low since mirror flips them
+    inverted_high = inverted["high"].values.copy()
+    inverted_low = inverted["low"].values.copy()
+    inverted["high"] = inverted_low
+    inverted["low"] = inverted_high
+    return inverted
+
+
 # ── Train one seed ──
 def train_seed(seed, train_df):
-    """Train a PPO model with the given seed, return (model, callback)."""
+    """Train a PPO model with market symmetry (real + inverted data)."""
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    # Market symmetry: concatenate real and inverted datasets
+    # Without session features, model must use RSI/MACD/OHLCV for direction
+    inverted_df = make_inverted_df(train_df)
+    combined_df = pd.concat([train_df, inverted_df], ignore_index=True)
+
     def make_env():
-        return TamedOHLCVEnv(train_df)
+        return TamedOHLCVEnv(combined_df)
 
     train_env = DummyVecEnv([make_env])
     train_env = VecMonitor(train_env)
@@ -249,14 +254,14 @@ def train_seed(seed, train_df):
     model = PPO(
         "MlpPolicy",
         train_env,
-        learning_rate=1e-4,       # lower LR for financial data
-        n_steps=2048,             # longer rollout for M5 bars
+        learning_rate=1e-4,
+        n_steps=2048,
         batch_size=64,
         n_epochs=10,
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
-        ent_coef=0.03,            # high entropy to encourage dynamic trading
+        ent_coef=ENT_COEF,         # 0.05 for discrete — forces exploration
         vf_coef=0.5,
         max_grad_norm=0.5,
         policy_kwargs=policy_kwargs,
@@ -271,7 +276,7 @@ def train_seed(seed, train_df):
 
 # ── CLI parsing + main (only runs when executed directly) ──
 def main():
-    parser = argparse.ArgumentParser(description="Lane B: Tamed Raw OHLCV + LSTM (Tier 2)")
+    parser = argparse.ArgumentParser(description="Lane B: Tamed Raw OHLCV + LSTM (Tier 3)")
     parser.add_argument("--symbol", default=SYMBOL, help=f"MT5 symbol (default: {SYMBOL})")
     parser.add_argument("--n-bars", type=int, default=N_BARS, help=f"Bars to load (default: {N_BARS})")
     parser.add_argument("--steps", type=int, default=N_STEPS, help=f"Timesteps (default: {N_STEPS})")
@@ -289,24 +294,27 @@ def main():
 
     # ── Begin experiment ──
     print("=" * 64)
-    print("LANE B — TAMED RAW OHLCV + LSTM (Tier 2: demeaned + RSI/MACD)")
+    print("LANE B — TAMED RAW OHLCV + LSTM (Tier 3: Discrete + Symmetry, raw returns)")
     print("=" * 64)
     print()
     print(f"  Config:")
+    print(f"    action_space:        Discrete(3) [Long/Flat/Short] — no EMA inertia")
+    print(f"    market_symmetry:     inverted dataset concatenated (2x bars)")
+    print(f"    reward:              raw 5-bar forward return (no demeaning)")
+    print(f"    session_features:    REMOVED (were spurious regime detector)")
     print(f"    timeframe:           {TIMEFRAME}")
-    print(f"    n_features:          {N_FEATURES} (5 OHLCV + 4 session + RSI + MACD hist)")
+    print(f"    n_features:          {N_FEATURES} (5 OHLCV + RSI + MACD hist)")
     print(f"    window_size:         {WINDOW_SIZE} bars ({WINDOW_SIZE*5} min)")
-    print(f"    turnover_cost:       {TURNOVER_COST} (ZERO — removed direction trap)")
+    print(f"    turnover_cost:       {TURNOVER_COST}")
+    print(f"    inactivity_penalty:  {INACTIVITY_PENALTY} (cost for staying flat)")
     print(f"    concentration_penalty: {CONCENTRATION_PENALTY}")
     print(f"    holding_penalty:     {HOLDING_PENALTY}")
-    print(f"    smoothing_alpha:     {POSITION_SMOOTHING_ALPHA}")
     print(f"    cooldown_steps:      {COOLDOWN_STEPS}")
-    print(f"    reward_horizon:      {REWARD_HORIZON} bars ({REWARD_HORIZON*5} min)")
-    print(f"    demean_window:       {DEMEAN_WINDOW} bars (excess over rolling mean)")
+    print(f"    reward_horizon:      {REWARD_HORIZON} bars")
     print(f"    reward_scale:        {REWARD_SCALE}")
     print(f"    total_timesteps:     {N_STEPS}")
     print(f"    ppo n_steps:         2048")
-    print(f"    ppo ent_coef:        0.03")
+    print(f"    ppo ent_coef:        {ENT_COEF}")
     print(f"    ppo learning_rate:   1e-4")
     print(f"    seeds:               {SEEDS}")
     print(f"    symbol:              {SYMBOL}")
@@ -320,7 +328,8 @@ def main():
     split = int(len(df) * 0.7)
     train_df = df.iloc[:split].reset_index(drop=True)
     val_df = df.iloc[split:].reset_index(drop=True)
-    print(f"  Train: {len(train_df)} bars | Val: {len(val_df)} bars")
+    print(f"  Train: {len(train_df)} bars (+ inverted = {len(train_df)*2} combined)")
+    print(f"  Val:   {len(val_df)} bars (real only, honest eval)")
     print()
 
     # Run seeds
@@ -355,7 +364,7 @@ def main():
         print(f"    Train long%={train_metrics['long_pct']:.1f} short%={train_metrics['short_pct']:.1f} "
               f"flat%={train_metrics['flat_pct']:.1f}")
 
-        # Validation
+        # Validation — on REAL data only (honest eval)
         val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE),
                                turnover_cost=TURNOVER_COST)
         val_metrics["weight_hash"] = compute_weight_hash(model)
@@ -437,7 +446,7 @@ def main():
             ax2.grid(alpha=0.3)
         axes[-1, 0].set_xlabel("Validation step")
         axes[-1, 1].set_xlabel("Validation step")
-        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 2: Demeaned + RSI/MACD (M5)", fontsize=13)
+        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 3: Discrete + Symmetry, Raw Returns (M5)", fontsize=13)
         plt.tight_layout()
         plt.savefig("runtime/lane_b_raw_all_seeds.png", dpi=150)
         plt.close()
@@ -451,10 +460,10 @@ def main():
     print("CONCLUSION")
     print("=" * 64)
     avg_sharpe = np.mean([m["sharpe"] for m in all_val_metrics])
-    avg_turnover = np.mean([m["turnover"] for m in all_val_metrics])
     avg_return = np.mean([m["total_return"] for m in all_val_metrics])
     avg_long = np.mean([m["long_pct"] for m in all_val_metrics])
     avg_short = np.mean([m["short_pct"] for m in all_val_metrics])
+    avg_turnover = np.mean([m["turnover"] for m in all_val_metrics])
 
     print(f"  Avg Sharpe:  {avg_sharpe:.2f}")
     print(f"  Avg Return:  {avg_return:.2f}%")
@@ -463,11 +472,16 @@ def main():
     print(f"  Avg Turnover: {avg_turnover:.1f}%")
 
     if avg_sharpe > 0:
-        print("\n  PROFITABLE! The demeaned reward + RSI/MACD features found an edge.")
-    elif abs(avg_long - avg_short) < 30:
-        print("\n  Model trades both directions — the direction trap is broken.")
+        print("\n  PROFITABLE!")
     else:
-        print("\n  Model still biased to one direction. Consider cross-asset features (DXY, VIX).")
+        print("\n  Not profitable yet.")
+
+    if avg_long > 10 and avg_short > 10 and avg_turnover > 5:
+        print("  TRAP BROKEN — model trades both directions dynamically.")
+    elif avg_long > 5 and avg_short > 5:
+        print("  Model trades both sides but one dominates.")
+    else:
+        print("  Direction trap persists.")
     print()
     print("  Done.")
 
