@@ -62,6 +62,12 @@ TURNOVER_COST = 0.0           # zero — removed direction trap
 CONCENTRATION_PENALTY = 0.0   # zero for discrete — no "extreme position" problem with Long/Flat/Short
 COOLDOWN_STEPS = 5
 REWARD_HORIZON = 5            # predict 5-bar forward return
+
+# Annualization factor by timeframe (for honest Sharpe)
+_TF_ANNUAL = {
+    "M1": 252*1440, "M5": 252*288, "M15": 252*96, "M30": 252*48,
+    "H1": 252*24, "H4": 252*6, "D1": 252,
+}
 REWARD_SCALE = 1000.0         # scale raw returns (~0.001) to PPO-friendly range (~1.0)
 INACTIVITY_PENALTY = 0.0003   # cost for staying flat (0.0003*1000 = 0.3 in reward space)
 HOLDING_PENALTY = 0.00005     # small penalty when holding > 0.3 position unchanged
@@ -323,7 +329,7 @@ def main():
 
     # Load data
     print(f"  Loading {SYMBOL} data ({TIMEFRAME}, {N_BARS} bars)...")
-    df = load_real_data(symbol=SYMBOL, n_bars=N_BARS)
+    df = load_real_data(symbol=SYMBOL, n_bars=N_BARS, timeframe=TIMEFRAME)
     print(f"  Loaded {len(df)} bars of {SYMBOL}")
     split = int(len(df) * 0.7)
     train_df = df.iloc[:split].reset_index(drop=True)
@@ -366,7 +372,7 @@ def main():
 
         # Validation — on REAL data only (honest eval)
         val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE),
-                               turnover_cost=TURNOVER_COST)
+                               turnover_cost=TURNOVER_COST, annualization_factor=_TF_ANNUAL.get(TIMEFRAME, 252*288))
         val_metrics["weight_hash"] = compute_weight_hash(model)
         all_val_metrics.append(val_metrics)
         all_positions.append(val_metrics["positions"])
