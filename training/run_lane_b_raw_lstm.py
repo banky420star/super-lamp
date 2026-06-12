@@ -24,7 +24,7 @@ CLI args:
 
 Output: runtime/lane_b_raw_all_seeds.csv
 """
-import sys, os, time, warnings, argparse
+import sys, os, time, warnings, argparse, json, shutil
 import numpy as np
 import pandas as pd
 
@@ -46,7 +46,7 @@ from training.taming_shared import BaseTamedEnv, MetricsCallback, compute_weight
 SYMBOL = "XAUUSDm"
 N_BARS = 100000
 N_STEPS = 50000
-SEEDS = [42, 123, 456]
+SEEDS = [42, 123, 456, 789, 234, 567, 890, 345]
 TIMEFRAME = "M5"
 
 
@@ -62,12 +62,6 @@ TURNOVER_COST = 0.0           # zero — removed direction trap
 CONCENTRATION_PENALTY = 0.0   # zero for discrete — no "extreme position" problem with Long/Flat/Short
 COOLDOWN_STEPS = 5
 REWARD_HORIZON = 5            # predict 5-bar forward return
-
-# Annualization factor by timeframe (for honest Sharpe)
-_TF_ANNUAL = {
-    "M1": 252*1440, "M5": 252*288, "M15": 252*96, "M30": 252*48,
-    "H1": 252*24, "H4": 252*6, "D1": 252,
-}
 REWARD_SCALE = 1000.0         # scale raw returns (~0.001) to PPO-friendly range (~1.0)
 INACTIVITY_PENALTY = 0.0003   # cost for staying flat (0.0003*1000 = 0.3 in reward space)
 HOLDING_PENALTY = 0.00005     # small penalty when holding > 0.3 position unchanged
@@ -329,7 +323,7 @@ def main():
 
     # Load data
     print(f"  Loading {SYMBOL} data ({TIMEFRAME}, {N_BARS} bars)...")
-    df = load_real_data(symbol=SYMBOL, n_bars=N_BARS, timeframe=TIMEFRAME)
+    df = load_real_data(symbol=SYMBOL, n_bars=N_BARS)
     print(f"  Loaded {len(df)} bars of {SYMBOL}")
     split = int(len(df) * 0.7)
     train_df = df.iloc[:split].reset_index(drop=True)
@@ -372,7 +366,7 @@ def main():
 
         # Validation — on REAL data only (honest eval)
         val_metrics = evaluate(model, lambda: TamedOHLCVEnv(val_df, window_size=WINDOW_SIZE),
-                               turnover_cost=TURNOVER_COST, annualization_factor=_TF_ANNUAL.get(TIMEFRAME, 252*288))
+                               turnover_cost=TURNOVER_COST)
         val_metrics["weight_hash"] = compute_weight_hash(model)
         all_val_metrics.append(val_metrics)
         all_positions.append(val_metrics["positions"])
@@ -384,12 +378,128 @@ def main():
               f"DD={val_metrics['max_drawdown']:.2f}%")
         print(f"    Turnover={val_metrics['turnover']:.1f}% PosStd={val_metrics['pos_std']:.4f}")
         print(f"    action_hash={val_metrics['action_hash']}  weight_hash={val_metrics['weight_hash']}")
+
+        # Save per-seed model
+        os.makedirs("runtime", exist_ok=True)
+        model_path = f"runtime/lane_b_seed_{seed}_model.zip"
+        model.save(model_path)
+        print(f"    Model saved: {model_path}")
         print()
+
+    # ── Champion selection ──
+    print()
+    print("=" * 64)
+    print("CHAMPION SELECTION")
+    print("=" * 64)
+
+    def select_champion(val_metrics_list, seeds_list):
+        """Select champion seed based on strict criteria.
+
+        Rejection rules:
+          - Return < 0%
+          - Max drawdown < -20%
+          - Long% > 98% (one-sided trap)
+          - Short% > 98% (one-sided trap)
+
+        Champion = highest return / abs(drawdown) ratio among candidates.
+        """
+        champion_seed = None
+        best_score = -float('inf')
+        scorecard_rows = []
+
+        for i, seed in enumerate(seeds_list):
+            m = val_metrics_list[i]
+            ret = m['total_return']
+            dd = m['max_drawdown']
+            long_pct = m['long_pct']
+            short_pct = m['short_pct']
+            sharpe = m['sharpe']
+
+            reject_reasons = []
+            if ret < 0:
+                reject_reasons.append(f"return={ret:.2f}% < 0%")
+            if dd < -20:
+                reject_reasons.append(f"drawdown={dd:.2f}% < -20%")
+            if long_pct > 98:
+                reject_reasons.append(f"long_pct={long_pct:.1f}% > 98%")
+            if short_pct > 98:
+                reject_reasons.append(f"short_pct={short_pct:.1f}% > 98%")
+
+            status = "REJECTED" if reject_reasons else "CANDIDATE"
+            score = ret / max(abs(dd), 0.1)  # floor denominator to avoid division blow-up
+
+            scorecard_rows.append({
+                "seed": int(seed),
+                "return_pct": round(ret, 2),
+                "drawdown_pct": round(dd, 2),
+                "sharpe": round(sharpe, 2),
+                "long_pct": round(long_pct, 1),
+                "short_pct": round(short_pct, 1),
+                "score": round(score, 4),
+                "status": status,
+                "reject_reasons": reject_reasons,
+                "weight_hash": m.get("weight_hash", ""),
+            })
+
+            if status == "CANDIDATE" and score > best_score:
+                best_score = score
+                champion_seed = seed
+
+        return champion_seed, scorecard_rows, best_score
+
+    champion, scorecard, best_score = select_champion(all_val_metrics, SEEDS)
+
+    # Print scorecard table
+    print(f"\n  {'Seed':>6} {'Return%':>9} {'DD%':>8} {'Sharpe':>8} {'Long%':>7} {'Short%':>7} {'Score':>8} {'Status':>10}")
+    print(f"  {'-'*6} {'-'*9} {'-'*8} {'-'*8} {'-'*7} {'-'*7} {'-'*8} {'-'*10}")
+    for row in scorecard:
+        print(f"  {row['seed']:>6} {row['return_pct']:>9.2f} {row['drawdown_pct']:>8.2f} "
+              f"{row['sharpe']:>8.2f} {row['long_pct']:>7.1f} {row['short_pct']:>7.1f} "
+              f"{row['score']:>8.4f} {row['status']:>10}")
+
+    # Print rejection reasons
+    rejected = [r for r in scorecard if r['status'] == 'REJECTED']
+    if rejected:
+        print(f"\n  Rejections:")
+        for r in rejected:
+            for reason in r['reject_reasons']:
+                print(f"    Seed {r['seed']}: {reason}")
+
+    # Promote champion
+    if champion is not None:
+        src = f"runtime/lane_b_seed_{champion}_model.zip"
+        dst = "runtime/champion_lane_b_model.zip"
+        try:
+            shutil.copy2(src, dst)
+            print(f"\n  [OK] CHAMPION: Seed {champion} (score={best_score:.4f})")
+            print(f"       Model promoted: {src} -> {dst}")
+        except Exception as e:
+            print(f"\n  [WARN] Champion seed {champion} selected but copy failed: {e}")
+    else:
+        print(f"\n  [NO] No champion — all seeds rejected.")
+
+    # Save scorecard JSON
+    scorecard_path = "runtime/champion_lane_b_scorecard.json"
+    with open(scorecard_path, "w") as f:
+        json.dump({
+            "champion_seed": champion,
+            "champion_score": best_score if champion else None,
+            "scorecard": scorecard,
+            "config": {
+                "symbol": SYMBOL,
+                "n_bars": N_BARS,
+                "n_steps": N_STEPS,
+                "timeframe": TIMEFRAME,
+                "n_features": N_FEATURES,
+                "window_size": WINDOW_SIZE,
+            },
+        }, f, indent=2)
+    print(f"       Scorecard: {scorecard_path}")
 
     # ── Aggregate ──
     print()
     print("=" * 64)
-    print("AGGREGATED RESULTS (mean +/- std across 3 seeds)")
+    print("AGGREGATED RESULTS (mean +/- std across seeds)")
     print("=" * 64)
 
     metrics_names = ["long_pct", "short_pct", "flat_pct", "pos_mean", "pos_std",
@@ -428,8 +538,8 @@ def main():
         for j in range(len(pos)):
             all_data.append({"seed": seed, "step": j, "position": pos[j],
                              "net_worth": nw[min(j+1, len(nw)-1)]})
-    pd.DataFrame(all_data).to_csv("runtime/lane_b_raw_all_seeds.csv", index=False)
-    print(f"\n  CSV: runtime/lane_b_raw_all_seeds.csv")
+    pd.DataFrame(all_data).to_csv("runtime/lane_b_raw_8seeds.csv", index=False)
+    print(f"\n  CSV: runtime/lane_b_raw_8seeds.csv")
 
     # Plot
     try:
@@ -452,11 +562,11 @@ def main():
             ax2.grid(alpha=0.3)
         axes[-1, 0].set_xlabel("Validation step")
         axes[-1, 1].set_xlabel("Validation step")
-        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 3: Discrete + Symmetry, Raw Returns (M5)", fontsize=13)
+        plt.suptitle("Tamed Raw OHLCV + LSTM — Tier 3: Discrete + Symmetry, Raw Returns, 8 Seeds (M5)", fontsize=13)
         plt.tight_layout()
-        plt.savefig("runtime/lane_b_raw_all_seeds.png", dpi=150)
+        plt.savefig("runtime/lane_b_raw_8seeds.png", dpi=150)
         plt.close()
-        print(f"  Plot: runtime/lane_b_raw_all_seeds.png")
+        print(f"  Plot: runtime/lane_b_raw_8seeds.png")
     except Exception as e:
         print(f"  Plot failed: {e}")
 
