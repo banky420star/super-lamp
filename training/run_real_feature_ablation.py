@@ -136,12 +136,18 @@ def load_real_data(
     symbol: str = "XAUUSDm",
     n_bars: int = 5000,
     seed: int = 42,
+    timeframe: str = "M5",
 ) -> pd.DataFrame:
-    """Load real OHLCV data for the given symbol.
+    """Load real OHLCV data for the given symbol at the given timeframe.
 
     Falls back to fetching from the data_feed pipeline; if that fails,
     downloads from a Python data source or generates synthetic data as
     a last resort so the harness is always runnable.
+
+    Parameters
+    ----------
+    timeframe : str
+        MT5 timeframe string: M1, M5, M15, M30, H1, H4, D1 (default: M5)
     """
     try:
         from Python.data_feed import fetch_training_data
@@ -157,8 +163,17 @@ def load_real_data(
     try:
         import MetaTrader5 as mt5
 
+        # Map timeframe string to MT5 constant
+        _MT5_TF = {
+            "M1": mt5.TIMEFRAME_M1, "M5": mt5.TIMEFRAME_M5,
+            "M15": mt5.TIMEFRAME_M15, "M30": mt5.TIMEFRAME_M30,
+            "H1": mt5.TIMEFRAME_H1, "H4": mt5.TIMEFRAME_H4,
+            "D1": mt5.TIMEFRAME_D1,
+        }
+        mt5_tf = _MT5_TF.get(timeframe.upper(), mt5.TIMEFRAME_M5)
+
         if mt5.initialize():
-            rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, n_bars)
+            rates = mt5.copy_rates_from_pos(symbol, mt5_tf, 0, n_bars)
             mt5.shutdown()
             if rates is not None and len(rates) >= 1000:
                 df = pd.DataFrame(rates)
@@ -172,7 +187,10 @@ def load_real_data(
     # Last resort: synthetic data spanning a realistic price range
     print("  WARNING: Using synthetic data — results will not reflect real market structure")
     np.random.seed(seed)
-    idx = pd.date_range("2026-01-01", periods=n_bars, freq="5min", tz="UTC")
+    _FREQ = {"M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+              "H1": "1h", "H4": "4h", "D1": "1D"}
+    freq = _FREQ.get(timeframe.upper(), "5min")
+    idx = pd.date_range("2026-01-01", periods=n_bars, freq=freq, tz="UTC")
     price = 100.0 * np.exp(np.cumsum(np.random.randn(n_bars) * 0.0005))
     df = pd.DataFrame({
         "open": price * (1 - 0.0003 * np.abs(np.random.randn(n_bars))),
