@@ -672,9 +672,14 @@ function Invoke-PostCandidateHandoff {
     # Discover exact candidate dir if not passed
     if (-not $CandidatePath -or -not (Test-Path $CandidatePath)) {
         try {
-            $pyFind = & $pythonExe "tools\export_for_mql5.py" --find-latest-good-candidate 2>&1 | Out-String
-            if ($LASTEXITCODE -eq 0) {
-                $CandidatePath = ($pyFind.Trim() -split "`n" | Select-Object -Last 1).Trim()
+            $tool = Join-Path $RepoRoot "tools\export_for_mql5.py"
+            if (Test-Path $tool) {
+                $pyFind = & $pythonExe $tool --find-latest-good-candidate 2>&1 | Out-String
+                if ($LASTEXITCODE -eq 0 -and $pyFind -notmatch "NO_GOOD|None|not found") {
+                    $CandidatePath = ($pyFind.Trim() -split "`n" | Select-Object -Last 1).Trim()
+                }
+            } else {
+                Write-SupLog "DEBUG" "export_for_mql5.py not present (candidate finder skipped; non-fatal for v4 runs)"
             }
         } catch {}
         if (-not $CandidatePath -or -not (Test-Path $CandidatePath)) {
