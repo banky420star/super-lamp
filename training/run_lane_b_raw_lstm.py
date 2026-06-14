@@ -347,6 +347,37 @@ def main():
         model, cb = train_seed(seed, train_df)
         train_time = time.time() - t0
 
+        # Phase 5/7: Symbol-specific per-seed model save (no generic paths)
+        os.makedirs("runtime", exist_ok=True)
+        per_seed_path = f"runtime/lane_b_seed_{seed}_{SYMBOL}_model.zip"
+        try:
+            model.save(per_seed_path)
+            print(f"    Saved per-seed model: {per_seed_path}")
+        except Exception as save_err:
+            print(f"    [WARN] Failed to save model for seed {seed}: {save_err}")
+
+        # Phase 7/13/14: register per-seed Lane B candidate to model_registry (with seed/symbol/lane/status)
+        try:
+            import shutil as _shutil
+            from Python.model_registry import ModelRegistry
+            reg = ModelRegistry()
+            cand_dir = reg.new_candidate_dir(tag=f"laneb_{SYMBOL}_seed{seed}")
+            _shutil.copy2(per_seed_path, os.path.join(cand_dir, "ppo_trading.zip"))
+            meta = {
+                "lane": "b",
+                "symbol": SYMBOL,
+                "seed": seed,
+                "model_id": f"lane_b_{SYMBOL}_seed{seed}_{int(time.time())}",
+                "status": "candidate",
+                "hashes": {"model_sha256": compute_weight_hash(model)},
+                "source": "run_lane_b_raw_lstm",
+            }
+            with open(os.path.join(cand_dir, "metadata.json"), "w") as mf: json.dump(meta, mf, indent=2)
+            reg.register_candidate(cand_dir, meta)
+            print(f"    Registered candidate to registry: {cand_dir}")
+        except Exception as reg_e:
+            print(f"    [INFO] LaneB registry candidate optional (skip): {reg_e}")
+
         # Training metrics
         trn_pos = np.array(cb.positions)
         train_metrics = {

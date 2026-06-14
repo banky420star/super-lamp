@@ -86,6 +86,45 @@ try:
 except Exception:
     def log_decision(*a, **k): return False
 
+# Phase 9: structured decision logger for EVERY action (incl FLAT with explicit reason)
+_DECISION_LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "logs", "decisions.jsonl"
+)
+def _log_structured_decision(fields: dict) -> None:
+    """Write the full required fields for Phase 9 decision logging. Never silent."""
+    try:
+        os.makedirs(os.path.dirname(_DECISION_LOG_PATH), exist_ok=True)
+        full = {
+            "timestamp": fields.get("timestamp") or __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+            "symbol": fields.get("symbol", ""),
+            "lane": fields.get("lane", "unknown"),
+            "model_path": fields.get("model_path"),
+            "model_hash": fields.get("model_hash"),
+            "raw_action": fields.get("raw_action"),
+            "final_action": fields.get("final_action"),
+            "confidence": fields.get("confidence", 0.0),
+            "regime": fields.get("regime"),
+            "adx": fields.get("adx"),
+            "spread": fields.get("spread"),
+            "bid": fields.get("bid"),
+            "ask": fields.get("ask"),
+            "market_open": fields.get("market_open", True),
+            "data_stale": fields.get("data_stale", False),
+            "blocked_by_safety": fields.get("blocked_by_safety", False),
+            "reason": fields.get("reason", ""),
+            "dry_run": fields.get("dry_run", True),
+            "lot": fields.get("lot"),
+            "SL": fields.get("SL"),
+            "TP": fields.get("TP"),
+        }
+        if full.get("final_action") in (None, 0, "FLAT", "flat", "HOLD") and not full.get("reason"):
+            full["reason"] = fields.get("reason") or "explicit_flat_or_no_action"
+        with open(_DECISION_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(__import__("json").dumps(full, default=str) + "\n")
+    except Exception:
+        pass  # best effort, never crash exec path
+
 # Rich Python backend (already production hardened)
 try:
     from Python.order_manager import OrderManager, ManagedPosition

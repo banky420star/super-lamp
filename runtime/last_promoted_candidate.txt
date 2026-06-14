@@ -1,1 +1,1 @@
-C:\Users\Administrator\AppData\Local\Temp\pytest-of-Administrator\pytest-62\test_mock_candidate_e2e_promot0\MOCK_POSTFIX_20260609_160543
+C:\Users\Administrator\AppData\Local\Temp\pytest-of-Administrator\pytest-71\test_mock_candidate_e2e_promot0\MOCK_POSTFIX_20260614_202237

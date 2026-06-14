@@ -1,6 +1,6 @@
 {
-  "ts": "2026-06-09T16:06:11.195200+00:00",
-  "candidate": "MOCK_POSTFIX_20260609_160543",
+  "ts": "2026-06-14T20:23:01.602411+00:00",
+  "candidate": "MOCK_POSTFIX_20260614_202237",
   "decision": "HOLD_FOR_REVIEW",
   "core_gates_pass": false,
   "mql5_shadow_prepared": true,

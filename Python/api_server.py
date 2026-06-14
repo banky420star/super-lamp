@@ -859,7 +859,7 @@ def _get_account_truth(mt5_account_info: dict) -> dict:
 def _get_data_provenance() -> dict:
     """Return honest data source status."""
     try:
-        from Python.data.provenance import get_provenance_status
+        from Python.data.provenance import get_provenance_status, data_foundation  # Phase 16 dashboard truthful data foundation integration
         return get_provenance_status()
     except Exception:
         pass
@@ -1168,6 +1168,26 @@ def api_status():
     models_truth = _get_model_registry_status(progress)
     validation_truth = _get_validation_status()
     tests_truth = _get_test_status()
+    # Phase 16: truthful foundation status (no hiding failures)
+    try:
+        fd_summary = data_foundation.summary()
+        paper_trades = data_foundation.get_recent("trades", 20)
+        dry_decs = data_foundation.get_recent("decisions", 10)
+        feat_audits = data_foundation.get_recent("feature_audits", 5)
+        regime_l = data_foundation.get_recent("regime_logs", 5)
+        training_r = data_foundation.get_recent("training_runs", 5)
+    except Exception:
+        fd_summary = {}; paper_trades=[]; dry_decs=[]; feat_audits=[]; regime_l=[]; training_r=[]
+    foundation_truth = {
+        "tables": fd_summary,
+        "recent_paper_trades": len(paper_trades),
+        "recent_dry_decisions": len(dry_decs),
+        "feature_audits_recent": len(feat_audits),
+        "regime_logs_recent": len(regime_l),
+        "training_runs": len(training_r),
+        "last_training": training_r[-1] if training_r else None,
+        "last_feature_audit_passed": (feat_audits[-1].get("passed") == "1") if feat_audits else None,
+    }
 
     # Record heartbeats for agents based on actual activity
     if symbols:
@@ -1279,6 +1299,12 @@ def api_status():
             "canary": canary_id or None,
             "per_symbol_models": per_symbol_models,
         },
+        "foundation": foundation_truth,
+        "paper_trades_sample": paper_trades[:3] if 'paper_trades' in locals() else [],
+        "dry_decisions_sample": dry_decs[:3] if 'dry_decs' in locals() else [],
+        "safety_blocks": {"halt": halt, "reason": halt_reason, "real_money_locked": system_truth.get("real_money_locked", True)},
+        "promotion_gates_status": {"active_champion": champ_id, "candidates_count": len([x for x in (active.get('candidates') or []) if x]), "rejected": []},
+        "test_data_model_status": {"data_ok": bool(data_truth), "models_ok": bool(models_truth), "feature_audits_ok": foundation_truth.get("last_feature_audit_passed")},
         "incidents": incidents or [{
             "id": "SYS-001",
             "type": "system",

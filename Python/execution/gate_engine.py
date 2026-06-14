@@ -2,10 +2,14 @@
 
 Receives a trade intent, runs pre-flight checks (spread, regime, telemetry,
 test health), and returns a structured gate result.
+
+Phase 6: Hard safety execution layer. Defaults to locked/dry-run.
+All gates must pass before ANY execution. "No real-money live trading until every gate passes".
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,6 +18,60 @@ from Python.execution.account_verifier import verify_account
 from Python.execution.live_gate import live_trading_allowed, demo_trading_allowed
 from Python.execution.risk_supervisor import RiskSupervisor
 
+RUNTIME_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "runtime")
+KILL_SWITCH_PATH = os.path.join(RUNTIME_DIR, "KILL_SWITCH")
+
+# Default allowed symbols (Phase 6 spec)
+DEFAULT_ALLOWED_SYMBOLS = {"XAUUSDm", "EURUSDm", "GBPUSDm", "BTCUSDm", "ETHUSDm"}
+
+def _is_kill_switch_active() -> bool:
+    """Hard kill switch: presence of runtime/KILL_SWITCH blocks ALL trading (real or demo)."""
+    try:
+        return os.path.exists(KILL_SWITCH_PATH)
+    except Exception:
+        return False
+
+def _check_symbol_allowed(symbol: str, config: dict) -> tuple[bool, str]:
+    allowed = set(config.get("risk", {}).get("allowed_symbols", []) or DEFAULT_ALLOWED_SYMBOLS)
+    if not allowed:
+        allowed = DEFAULT_ALLOWED_SYMBOLS
+    if str(symbol) not in allowed:
+        return False, f"symbol_not_allowed:{symbol}"
+    return True, "ok"
+
+def _check_market_open(symbol: str) -> tuple[bool, str]:
+    # Simplified: rely on MT5 or basic weekday check; full impl in data_feed/market_guardian
+    return True, "market_check_deferred_to_executor"
+
+def _check_stale_data(data_ts: Any = None, max_age_sec: float = 300.0) -> tuple[bool, str]:
+    """Block if data is stale (> max_age_sec old)."""
+    if data_ts is None:
+        return True, "stale_check_no_ts"
+    try:
+        import time
+        now = time.time()
+        age = now - float(data_ts)
+        if age > max_age_sec:
+            return False, f"data_stale age={age:.0f}s > {max_age_sec}s"
+    except Exception:
+        pass
+    return True, "ok"
+
+def _check_model_exists(model_path: str | None) -> tuple[bool, str]:
+    if not model_path:
+        return False, "no_model_path"
+    try:
+        if not os.path.exists(str(model_path)):
+            return False, f"model_not_found:{model_path}"
+    except Exception:
+        return False, "model_path_error"
+    return True, "ok"
+
+def _check_confidence(conf: float, min_conf: float = 0.6) -> tuple[bool, str]:
+    if float(conf or 0.0) < min_conf:
+        return False, f"confidence_too_low {conf} < {min_conf}"
+    return True, "ok"
+
 
 @dataclass
 class GateResult:
@@ -21,6 +79,10 @@ class GateResult:
     risk_passed: bool
     execution_mode: str
     reason: str
+    blocked_by_safety: bool = False
+    dry_run: bool = True
+    # Phase 9 enriched for decision logging
+    details: dict | None = None
 
 
 class GateEngine:
@@ -56,6 +118,77 @@ class GateEngine:
         spread_bps = float(intent.get("spread_bps", 0.0) or 0.0)
         regime = str(intent.get("regime", "")).lower()
         target_exposure = float(intent.get("target_exposure", 0.0) or 0.0)
+        confidence = float(intent.get("confidence", intent.get("agi_confidence", 0.0)) or 0.0)
+        model_path = intent.get("model_path") or intent.get("model_candidate_dir")
+        data_ts = intent.get("data_ts") or intent.get("last_bar_time")
+
+        # === PHASE 6 HARD GATES (must pass before any execution; defaults: locked + dry-run) ===
+        if _is_kill_switch_active():
+            return GateResult(
+                gate_passed=False,
+                risk_passed=False,
+                execution_mode=self._mode,
+                reason="kill_switch_active (runtime/KILL_SWITCH present)",
+                blocked_by_safety=True,
+                dry_run=True,
+                details={"kill_switch": KILL_SWITCH_PATH},
+            )
+
+        # real_money_locked default: only real_live is real money, everything else locked/dry
+        dry_run = self._mode not in ("real_live", "demo_live")
+        if self._mode == "real_live_locked":
+            return GateResult(
+                gate_passed=False,
+                risk_passed=False,
+                execution_mode=self._mode,
+                reason="real_money_locked (CHAIN_GAMBLER_ALLOW_LIVE!=1 or mode=real_live_locked)",
+                blocked_by_safety=True,
+                dry_run=True,
+                details={"mode": self._mode},
+            )
+
+        # Symbol allowed list gate
+        sym_ok, sym_reason = _check_symbol_allowed(symbol, self.config)
+        if not sym_ok:
+            return GateResult(
+                gate_passed=False, risk_passed=False, execution_mode=self._mode,
+                reason=sym_reason, blocked_by_safety=True, dry_run=dry_run,
+                details={"allowed_symbols": list(DEFAULT_ALLOWED_SYMBOLS)},
+            )
+
+        # Stale data block
+        stale_ok, stale_reason = _check_stale_data(data_ts)
+        if not stale_ok:
+            return GateResult(
+                gate_passed=False, risk_passed=False, execution_mode=self._mode,
+                reason=stale_reason, blocked_by_safety=True, dry_run=dry_run,
+            )
+
+        # Market closed (soft for now, defer full to executor but gate if known closed)
+        mkt_ok, mkt_reason = _check_market_open(symbol)
+        if not mkt_ok:
+            return GateResult(
+                gate_passed=False, risk_passed=False, execution_mode=self._mode,
+                reason=mkt_reason, blocked_by_safety=True, dry_run=dry_run,
+            )
+
+        # Model exists (if path supplied in intent)
+        if model_path:
+            mod_ok, mod_reason = _check_model_exists(model_path)
+            if not mod_ok:
+                return GateResult(
+                    gate_passed=False, risk_passed=False, execution_mode=self._mode,
+                    reason=mod_reason, blocked_by_safety=True, dry_run=dry_run,
+                )
+
+        # Confidence gate (hard min, default 0.6; config can override)
+        min_conf = float(self.config.get("risk", {}).get("min_confidence", 0.60))
+        conf_ok, conf_reason = _check_confidence(confidence, min_conf)
+        if not conf_ok:
+            return GateResult(
+                gate_passed=False, risk_passed=False, execution_mode=self._mode,
+                reason=conf_reason, blocked_by_safety=True, dry_run=dry_run,
+            )
 
         # 1. Spread gate
         max_spread_bps = float(

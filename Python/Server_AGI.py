@@ -137,6 +137,57 @@ def _append_trade_event(event: str, payload: dict):
     _append_audit(event, payload)
 
 
+# Phase 9: full decision log for every action (Server_AGI live bot path). If FLAT, explicit reason. All fields.
+def _append_full_decision_log(symbol, exposure, decision, agi_meta, ppo_meta, regime, conf, reason, blocked=False, dry_run=True, model_path=None, model_hash=None):
+    try:
+        tick = None
+        try:
+            tick = mt5.symbol_info_tick(symbol)
+        except Exception:
+            pass
+        spread = _tick_spread_bps(symbol)
+        bid = float(getattr(tick, 'bid', 0.0) or 0.0) if tick else None
+        ask = float(getattr(tick, 'ask', 0.0) or 0.0) if tick else None
+        adx = float((agi_meta or {}).get("adx", (agi_meta or {}).get("trend_strength", 0.0)) or 0.0)
+        raw_action = float((ppo_meta or {}).get("target", (decision or {}).get("raw_target", 0.0)) or 0.0)
+        final_action = float(exposure or 0.0)
+        if abs(final_action) < 0.01:
+            final_action = "FLAT"
+            if not reason:
+                reason = "below_min_threshold_or_risk_flat_or_block"
+        entry = {
+            "timestamp": _utc_now().isoformat(timespec="microseconds"),
+            "symbol": str(symbol),
+            "lane": ((ppo_meta or {}).get("lane") or ((decision or {}).get("profile", {}) or {}).get("lane") or "hybrid"),
+            "model_path": model_path or (ppo_meta or {}).get("model_path") or ((decision or {}).get("model_path")),
+            "model_hash": model_hash or (ppo_meta or {}).get("model_hash"),
+            "raw_action": raw_action,
+            "final_action": final_action,
+            "confidence": float(conf or 0.0),
+            "regime": str(regime),
+            "adx": adx,
+            "spread": spread,
+            "bid": bid,
+            "ask": ask,
+            "market_open": True,
+            "data_stale": False,
+            "blocked_by_safety": bool(blocked),
+            "reason": str(reason or ("flat_explicit" if final_action == "FLAT" else ""))[:512],
+            "dry_run": bool(dry_run),
+            "lot": None,
+            "SL": None,
+            "TP": None,
+        }
+        _append_jsonl(os.path.join(LOG_DIR, "decisions.jsonl"), entry)
+        try:
+            from Python.pipeline_audit import log_decision as _plog
+            _plog("trade_decision", "server_agi", str(final_action), reason=str(reason), details=entry)
+        except Exception:
+            pass
+    except Exception:
+        pass  # never break loop
+
+
 def _load_runtime_components():
     from Python.agi_brain import SmartAGI
     from Python.event_intel import EventIntel

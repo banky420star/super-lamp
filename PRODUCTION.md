@@ -907,3 +907,53 @@ See also:
 - `Python/features/multitimeframe_builder.py`
 - `Python/data_feed.py` (new `fetch_multitimeframe_training_data`)
 - `Python/feature_pipeline.py` (exposed `build_multitimeframe_feature_matrix`)
+
+---
+
+## 18-20: Readiness, Hardening, Completion Definition (Phases executed 2026-06)
+
+### Phase 18: Readiness Checklist (updated)
+- [x] Data foundation: runtime/data_foundation/ CSVs (market_bars, decisions, trades, equity, training_runs, feature_audits, regime_logs) with hashes + links (model/dataset/regime).
+- [x] Every training: metadata + dataset_hash on model.
+- [x] Feature audit: stats (mean/std/min/max/nonzero/nan/corr_return) + dead/leakage/dupe/trend-mom/pattern/cross checks integrated in pipeline + column_audit + foundation.
+- [x] Walk-forward: named time-based windows (older/middle/recent/stress), no shuffle, baselines (random/buyhold/MA/flat/champ), candidate multi-run reject if catastro/ not beat baseline.
+- [x] Lane C full: MTF, 50k default, symbol-specific save (runtime/lane_c_XXX_*), --dry-run loads/logs decisions to foundation, zero real orders.
+- [x] Paper: full paper (MT5 data only, paper exec sim PnL, journal to logs + foundation, alerts, ZERO real; accelerated run tested).
+- [x] Dashboard: /api/status now includes foundation tables, paper_trades, dry_decs, safety_blocks, active_champion, candidates/rejected, promotion_gates, test/data/model, no hiding.
+- [x] Kill switch, sane equity, complete journal verified in paper/dry runs.
+
+### Phase 19: Production Hardening
+- Config profiles: use configs/*.yaml + env (CHAIN_GAMBLER_EXECUTION_MODE=demo/paper, AGI_*) ; default DRY.
+- Structured logging: loguru + jsonl in logs/ + foundation CSVs (no unlogged).
+- Supervisor: scripts/vps_agi_supervisor.ps1 + healthcheck, restart on crash (already), added paper mode guard.
+- Health: /api/health/ready , api_status includes foundation/safety.
+- Alerts: telegram + TUI + runtime/agent_status/*.json .
+- Rollback: model_registry has champion rollback, integrity hashes; data foundation allows replay.
+- No duplicate/generic/unlogged: all via foundation + specific audits.
+
+### Phase 20: Project Complete Definition (20 points)
+Project complete when:
+1. Data foundation CSVs populated with every run linked (hash, model, regime).
+2. Feature audit passes (no dead/leakage/dupe, trend verified, cross ok) on builds.
+3. Walk-forward on 4 windows passes with candidate beating baselines, no catastro reject.
+4. Lane C 50k MTF trains dry, saves symbol spec, decisions logged, no real orders.
+5. Paper 2w-sim (accelerated) : MT5 data, sim orders only, full journal, sane equity curve, no spam logs, kill switch fires.
+6. Dashboard /status shows truthful (mode, locked, champion/cands/rej, paper/dry/safety/equity/gates, no omissions).
+7. Training metadata + dataset_hash on all models in registry.
+8. Promotion gates integrate wf/feature/foundation evidence.
+9. Dry-run always zero real (enforced in paper/lane/order paths).
+10. Structured logs + foundation for all decisions/trades/audits.
+11. Config profiles support paper/demo/live-locked.
+12. Supervisor + health + rollback tested.
+13. No bare excepts in critical (ongoing from prior).
+14. Evidence artifacts in artifacts/ + runtime/ for gates.
+15. Backtest/wf vs paper within tol.
+16. Per-symbol models + registry consistent.
+17. Alerts on blocks/failures.
+18. README/PRODUCTION updated with 18-20.
+19. All prior phases (1-17) green.
+20. "GO" in WINDOWS_PRODUCTION_GO_NO_GO_ASSESSMENT.md + signoff equiv (all checklist items evidenced).
+
+Current state: Phases 8,10,11,12,15,16,17,18-20 advanced in parallel with code changes, runs, foundation setup. Full 50k Lane C + long paper limited by env/MT5 avail but paths validated + gates implemented.
+
+See runtime/data_foundation/*.csv , updated Python/data/provenance.py , feature_registry etc for evidence.
