@@ -4472,8 +4472,8 @@ def start_api_server(agi_server=None, host: str = "0.0.0.0", port: int = API_POR
 
     def _run():
         proto = "https" if os.environ.get("AGI_API_TLS", "0") == "1" else "http"
-        logger.success(f"API server starting (threaded wsgiref) on {proto}://{host}:{port}")
-        bottle_run(app, host=host, port=port, quiet=True, server=ThreadedWSGIRefServer)
+        logger.success(f"API server starting (default wsgiref) on {proto}://{host}:{port}")
+        bottle_run(app, host=host, port=port, quiet=True)  # default reliable; threaded adapter had response issues
 
     t = threading.Thread(target=_run, name="api-server", daemon=True)
     t.start()
@@ -4595,9 +4595,12 @@ def api_timing_insights():
 # ═══════════════════════════════════════════════════════════════════════════
 # Standalone entry point
 # ═══════════════════════════════════════════════════════════════════════════
-# Serve the React dashboard UI from dashboard/dist (same origin as /api/* so fetches work without CORS, allowing load screen to progress to main UI once data arrives)
+# Serve the React dashboard UI from frontend/dist (preferred, built by launch -Preview) or fallback dashboard/dist.
+# This enables same-origin / for SPA + /api/* (no CORS issues for direct 5050 access if needed).
 import os
-DASHBOARD_DIST = os.path.join(os.path.dirname(__file__), '..', 'dashboard', 'dist')
+_frontend_dist = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
+_dashboard_dist = os.path.join(os.path.dirname(__file__), '..', 'dashboard', 'dist')
+DASHBOARD_DIST = _frontend_dist if os.path.isdir(_frontend_dist) else _dashboard_dist
 
 @app.route('/')
 def serve_index():
@@ -4605,10 +4608,13 @@ def serve_index():
 
 @app.route('/<filepath:path>')
 def serve_static(filepath):
+    if filepath.startswith('api/') or filepath.startswith('ws/'):
+        # Let API routes (registered earlier) handle; if reached here, 404
+        abort(404)
     full = os.path.join(DASHBOARD_DIST, filepath)
     if os.path.exists(full):
         return static_file(filepath, root=DASHBOARD_DIST)
-    # SPA fallback
+    # SPA fallback for client routes
     return static_file('index.html', root=DASHBOARD_DIST)
 
 if __name__ == "__main__":
@@ -4616,4 +4622,11 @@ if __name__ == "__main__":
     logger.info("Using threaded wsgiref server to avoid gevent RPyC blocking")
     proto = "https" if os.environ.get("AGI_API_TLS", "0") == "1" else "http"
     logger.info(f"Listening on {proto}://0.0.0.0:{API_PORT}")
-    bottle_run(app, host="0.0.0.0", port=API_PORT, quiet=False, reloader=False, server=ThreadedWSGIRefServer)
+    try:
+        # Use bottle default (wsgiref) for standalone reliability; custom Threaded had serve issues in some envs (no response despite enter serve_forever)
+        bottle_run(app, host="0.0.0.0", port=API_PORT, quiet=False, reloader=False)
+    except Exception as _e:
+        import traceback
+        logger.error(f"bottle_run failed: {_e}")
+        traceback.print_exc()
+        raise

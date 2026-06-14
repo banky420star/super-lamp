@@ -51,20 +51,7 @@ $RepoRoot = Split-Path -Parent $PSCommandPath
 if (-not $RepoRoot) { $RepoRoot = (Get-Location).Path }
 Set-Location $RepoRoot
 
-# ============================================================
-# NEW MULTI-TIMEFRAME STANDARD (1m + 5m + 15m + 1h per symbol)
-# Uses configs/best_features_per_symbol.yaml loaded via Python/features/multitimeframe_builder.py
-# + fetch_multitimeframe_training_data + build_multitimeframe_feature_matrix
-# This is now the easy default for full stack, training recovery, and handoff arming.
-# TUI with full React parity features + React UI started by default.
-# Legacy single-TF fallback preserved: set AGI_USE_LEGACY_SINGLE_TF=1 (or per-call overrides)
-# ============================================================
-$env:AGI_USE_LEGACY_SINGLE_TF = "0"
-$env:AGI_MULTI_TF_STANDARD = "1"
-$env:AGI_FEATURE_VERSION = "multitimeframe_best"
-$env:AGI_MTF_TIMEFRAMES = "1m,5m,15m,1h"
-Write-LaunchLog "INFO" "NEW STANDARD active: AGI_MULTI_TF_STANDARD=1 (best features per symbol; legacy via AGI_USE_LEGACY_SINGLE_TF=1)"
-
+# Log setup and helpers MUST be defined before first Write-LaunchLog (was bug: call before def + before $LaunchLog)
 $LogsDir = Join-Path $RepoRoot "logs"
 New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
 $LaunchLog = Join-Path $LogsDir "launch_full_project.log"
@@ -89,6 +76,20 @@ function Rotate-LogIfLarge { param([string]$Path, [int]$MaxMB = 10)
     }
 }
 Rotate-LogIfLarge -Path $LaunchLog
+
+# ============================================================
+# NEW MULTI-TIMEFRAME STANDARD (1m + 5m + 15m + 1h per symbol)
+# Uses configs/best_features_per_symbol.yaml loaded via Python/features/multitimeframe_builder.py
+# + fetch_multitimeframe_training_data + build_multitimeframe_feature_matrix
+# This is now the easy default for full stack, training recovery, and handoff arming.
+# TUI with full React parity features + React UI started by default.
+# Legacy single-TF fallback preserved: set AGI_USE_LEGACY_SINGLE_TF=1 (or per-call overrides)
+# ============================================================
+$env:AGI_USE_LEGACY_SINGLE_TF = "0"
+$env:AGI_MULTI_TF_STANDARD = "1"
+$env:AGI_FEATURE_VERSION = "multitimeframe_best"
+$env:AGI_MTF_TIMEFRAMES = "1m,5m,15m,1h"
+Write-LaunchLog "INFO" "NEW STANDARD active: AGI_MULTI_TF_STANDARD=1 (best features per symbol; legacy via AGI_USE_LEGACY_SINGLE_TF=1)"
 
 Write-LaunchLog "INFO" "=== Launch Full Project starting (DryRun=$DryRun, Preview=$Preview) ==="
 Write-LaunchLog "INFO" "RepoRoot: $RepoRoot"
