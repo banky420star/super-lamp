@@ -77,7 +77,7 @@ def _get_economic_calendar_cached():
     return _calendar_cache.get("events", [])
 from typing import Any
 
-from bottle import Bottle, ServerAdapter, request, response, abort, run as bottle_run
+from bottle import Bottle, ServerAdapter, request, response, abort, run as bottle_run, static_file
 from loguru import logger
 
 # ── Optional geventwebsocket support ────────────────────────────────────────
@@ -188,6 +188,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Bottle app
 # ---------------------------------------------------------------------------
 app = Bottle()
+
 
 
 @app.hook("before_request")
@@ -4594,6 +4595,22 @@ def api_timing_insights():
 # ═══════════════════════════════════════════════════════════════════════════
 # Standalone entry point
 # ═══════════════════════════════════════════════════════════════════════════
+# Serve the React dashboard UI from dashboard/dist (same origin as /api/* so fetches work without CORS, allowing load screen to progress to main UI once data arrives)
+import os
+DASHBOARD_DIST = os.path.join(os.path.dirname(__file__), '..', 'dashboard', 'dist')
+
+@app.route('/')
+def serve_index():
+    return static_file('index.html', root=DASHBOARD_DIST)
+
+@app.route('/<filepath:path>')
+def serve_static(filepath):
+    full = os.path.join(DASHBOARD_DIST, filepath)
+    if os.path.exists(full):
+        return static_file(filepath, root=DASHBOARD_DIST)
+    # SPA fallback
+    return static_file('index.html', root=DASHBOARD_DIST)
+
 if __name__ == "__main__":
     logger.info("Starting API server in standalone mode (no AGIServer reference)")
     logger.info("Using threaded wsgiref server to avoid gevent RPyC blocking")
