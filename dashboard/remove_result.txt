@@ -1,0 +1,28 @@
+Original: 46329 bytes
+Final: 45742 bytes
+Removed: 587 bytes
+
+stagger-2: REMOVED block (69 bytes)
+stagger-3: REMOVED block (83 bytes)
+stagger-5: REMOVED block (83 bytes)
+stagger-6: REMOVED combined line: .skeleton-line { height: 10px; margin-bottom: 6px; background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(90,215,255,0.06) 50%, rgba(255,255,255,0.03) 75%); background-size: 200% 100%; animation: skeletonLoading 1.5s ease-in-out infinite; border-radius: 3px; } .stagger-6 { animation-delay: 0.30s; } .stagger-8 { animation-delay: 0.40s; }
+stagger-8: NOT FOUND
+dot-1: NOT FOUND
+dot-2: NOT FOUND
+dot-3: NOT FOUND
+dot-4: NOT FOUND
+anim-data-value-in: NOT FOUND
+skeleton-shimmer: NOT FOUND
+
+Verification:
+OK: stagger-2 removed
+OK: stagger-3 removed
+OK: stagger-5 removed
+OK: stagger-6 removed
+OK: stagger-8 removed
+OK: dot-1 removed
+OK: dot-2 removed
+OK: dot-3 removed
+OK: dot-4 removed
+OK: anim-data-value-in removed
+OK: skeleton-shimmer removed

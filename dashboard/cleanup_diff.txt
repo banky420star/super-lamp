@@ -1,0 +1,34 @@
+Current CSS size: 46030 bytes
+
+=== CLEANUP VERIFICATION ===
+
+[REMOVED] .panel-card
+[REMOVED] .strategies-grid
+[REMOVED] @keyframes dotTyping
+[REMOVED] stagger-1
+[REMOVED] stagger-8
+[REMOVED] dot-1
+[REMOVED] dot-4
+[REMOVED] anim-bounce
+[REMOVED] anim-emphasis
+[REMOVED] anim-glow-border
+[REMOVED] anim-gradient-shift
+[REMOVED] anim-live-breath
+[REMOVED] anim-new-data
+[REMOVED] anim-ring-pulse
+[REMOVED] anim-shimmer-sweep
+[REMOVED] anim-stagger-in
+[REMOVED] anim-data-pulse
+[REMOVED] anim-data-value-in
+[STILL PRESENT] hover-scale
+[REMOVED] skeleton-loading
+[REMOVED] skeleton-shimmer
+
+[PRESERVED] skeleton-line (not in removal list - restored after accidental deletion)
+
+[REMOVED] strategies-grid className from StrategiesPanel.tsx
+
+=== BUILD SIZE COMPARISON ===
+Before: ~35 kB CSS, ~275 kB JS
+After:  33.07 kB CSS, 275.06 kB JS
+Savings: ~2 kB CSS (~6% reduction)

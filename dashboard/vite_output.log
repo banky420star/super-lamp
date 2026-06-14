@@ -1,0 +1,8 @@
+
+  [32m[1mVITE[22m v4.3.9[39m  [2mready in [0m[1m618[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4180[22m/app/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://194.163.171.68:[1m4180[22m/app/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh[22m[2m to show help[22m
+(node:3396) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)

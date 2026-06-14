@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pattern & Perp UI - MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  </head>
+  <body style="margin:0;font-family:Arial, sans-serif;background:#0b1220;color:#e5e7eb">
+    <div id="root" style="padding:24px"></div>
+    <script>
+      const App = () => {
+        const [status, setStatus] = React.useState(null);
+        const [patterns, setPatterns] = React.useState([]);
+        const [perf, setPerf] = React.useState(null);
+
+        React.useEffect(() => {
+          const load = () => {
+            fetch('/api/status').then(r => r.json()).then(setStatus).catch(() => setStatus(null));
+            fetch('/api/patterns').then(r => r.json()).then(setPatterns).catch(() => setPatterns([]));
+            fetch('/api/perf').then(r => r.json()).then(setPerf).catch(() => setPerf(null));
+          };
+          load();
+          const t = setInterval(load, 15000);
+          return () => clearInterval(t);
+        }, []);
+
+        return React.createElement('div', {style: {maxWidth: 1200, margin: '0 auto'}},
+          React.createElement('h1', null, 'Trading Stack — Pattern & Perp UI (MVP)'),
+          status ? React.createElement('div', null,
+            React.createElement('h2', null, 'Status'),
+            React.createElement('pre', {style: {background: '#111', color: '#9f9', padding: 12, borderRadius: 6}}, JSON.stringify(status, null, 2))
+          ) : React.createElement('div', null, 'Loading status...'),
+          React.createElement('h2', null, 'Pattern Library'),
+          React.createElement('div', {style: {border: '1px solid #333', borderRadius: 6, padding: 8, maxHeight: 240, overflow: 'auto'}},
+            patterns.length === 0 ? 'No patterns yet' :
+            React.createElement('ul', {style: {margin: 0, paddingLeft: 18}}, patterns.map((p,i)=>
+              React.createElement('li', {key: i}, typeof p === 'object' ? JSON.stringify(p) : p)
+            ))
+          ),
+          React.createElement('h2', null, 'Perpetual Improvement'),
+          perf ? React.createElement('pre', {style: {background: '#111', color: '#9f9', padding: 12, borderRadius: 6}}, JSON.stringify(perf, null, 2)) : 'Loading...'
+        );
+      };
+      ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+    </script>
+  </body>
+</html>

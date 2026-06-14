@@ -1,0 +1,28 @@
+{
+  "name": "Chain Gambler AGI — Autonomous Trading Terminal",
+  "short_name": "Chain Gambler",
+  "description": "Autonomous AI Trading System with PPO, LSTM, DreamerV3 and Advanced Risk Management",
+  "start_url": "/app/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "any",
+  "scope": "/app/",
+  "icons": [
+    {
+      "src": "/app/app_icon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/app/app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/app/app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
