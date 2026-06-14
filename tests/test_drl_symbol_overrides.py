@@ -2,7 +2,11 @@ from drl.trading_env import TradingEnv
 from training.train_drl import _resolve_symbol_training_options
 
 
-def test_btc_symbol_training_options_override_global_reward_and_action():
+def test_btc_symbol_training_options_override_global_reward_and_action(monkeypatch):
+    # Isolate from CI/job env var (AGI_FEATURE_VERSION=engineered_v2) so that
+    # the test's cfg["feature_version"] + default_feature_version path is exercised.
+    monkeypatch.delenv("AGI_FEATURE_VERSION", raising=False)
+
     cfg = {
         "drl": {
             "feature_version": "ultimate_150",

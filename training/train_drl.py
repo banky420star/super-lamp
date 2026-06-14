@@ -362,10 +362,12 @@ def _resolve_symbol_training_options(cfg: dict, symbols: list[str], default_feat
     drl_cfg = cfg.get("drl", {}) if isinstance(cfg.get("drl", {}), dict) else {}
     reward_cfg = dict(drl_cfg.get("reward", {}) or {}) if isinstance(drl_cfg.get("reward", {}), dict) else {}
     action_cfg = {}
-    feature_version = normalize_feature_version(
-        os.environ.get("AGI_FEATURE_VERSION") or drl_cfg.get("feature_version", default_feature_version),
-        default=default_feature_version,
-    )
+    env_feature_version = os.environ.get("AGI_FEATURE_VERSION")
+    cfg_feature_version = drl_cfg.get("feature_version")
+    raw_fv = env_feature_version or cfg_feature_version or default_feature_version
+    feature_version = normalize_feature_version(raw_fv, default=default_feature_version)
+    if env_feature_version and env_feature_version != cfg_feature_version:
+        logger.info(f"AGI_FEATURE_VERSION env={env_feature_version} overriding config feature_version={cfg_feature_version} (using {feature_version})")
 
     if len(symbols) == 1:
         symbol = str(symbols[0])

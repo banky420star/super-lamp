@@ -90,6 +90,14 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
         self._last_regime_probs = None
         super().__init__(observation_space, action_space, lr_schedule, *args, **kwargs)
 
+    @property
+    def value_classifier(self):
+        """Critic's independent regime classifier (on latent_vf).
+
+        Exposed for symmetry with regime_classifier, docs, tests and introspection.
+        """
+        return self.value_net.value_classifier
+
     def _build(self, lr_schedule) -> None:
         super()._build(lr_schedule)
         pi_latent_dim = self.mlp_extractor.latent_dim_pi
@@ -116,6 +124,8 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
             vf_latent_dim,
             self.num_regimes,
         )
+        # Note: value_classifier is exposed via @property below (no direct submodule
+        # assignment to avoid double registration of params under value_net + value_classifier).
 
         # Initialise — match SB3's standard action_net gain (0.01) so actions
         # start near zero and the policy explores before saturating at ±1.
@@ -140,7 +150,7 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
 
         action_head_names = [
             "regime_action_nets", "regime_value_nets",
-            "action_scale", "log_std", "regime_classifier",
+            "action_scale", "log_std", "regime_classifier", "value_net",
         ]
         body_params, action_head_params = [], []
 
