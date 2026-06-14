@@ -109,6 +109,8 @@ runtime/champion_*
 runtime/agent_status/
 runtime/data_foundation/
 runtime/execution_reports/
+runtime/KILL_SWITCH
+runtime/champion_lane_b_scorecard.json
 
 # Stray runtime data under Python/ (observed during hygiene; treat as artifact)
 Python/runtime/
