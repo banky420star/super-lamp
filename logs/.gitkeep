@@ -1,0 +1,3 @@
+# Ensure logs/ directory is tracked in git (for project hygiene).
+# All logs/ contents are gitignored (runtime artifacts).
+# Do not commit log files, jsonl, etc.

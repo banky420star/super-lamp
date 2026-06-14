@@ -366,3 +366,26 @@ chain_gambler-main/
 ├── config.yaml.example       Config template
 └── docker-compose.yml        Redis + n8n sidecar stack
 ```
+
+## Branching Strategy and Trading Core vs Platform Layer Separation
+
+This architecture is deliberately split across two concerns to prevent accidental mixing during development (per project-completion roadmap Phases 1-4):
+
+**Trading Core (isolated to `experiment/xauusd-regime-baseline` lineage only):**
+- Pure trading intelligence and execution: `drl/` (trading_env.py, ppo_agent, regime_detector, feature extractors, etc.), core `training/train_*.py` (DRL, LSTM), `Python/` modules directly tied to decisions (`data_feed.py`, `feature_pipeline.py`, `hybrid_brain.py`, `risk_engine.py`, `mt5_executor.py`, reward functions, `model_registry.py` core + evaluator for promotion).
+- Changes here affect live PnL, model behavior, risk math — must be validated on experiment branch, never mixed with UI refactors.
+- CI: full (incl. training paths if tagged), but Linux CI excludes MT5/broker.
+
+**Platform Layer (safe on `main`-based `feature/` branches e.g. `feature/dashboard-mission-control`, `feature/safety-registry-core`, `feature/ci-compile-gates`, `feature/runtime-hygiene`):**
+- User/control surface, observability, orchestration: `frontend/`, `dashboard/`, `ui_*`, `alerts/`, most `tools/` (non-training), launchers (DesktopLaunchers/, *.ps1, *.sh), `Server_AGI.py` (top-level server glue, but trading logic stays core), api_server.py (serving), config loaders, desktop tools, runtime hygiene scripts.
+- Dashboard mission control, safety registry wrappers (high-level), CI workflow enforcement, artifact ignoring.
+- These can evolve independently; no impact on core trading math when properly separated.
+
+**Enforcement:**
+- New work: always `git checkout -b feature/...` (or worktree) first. Reference this doc + SETUP.md#7.
+- PR descriptions must state "trading core" or "platform layer only".
+- `git status` / pre-commit should flag cross-layer file touches.
+- Do not stage/commit runtime artifacts, models, node_modules, pycache, etc. (see Phase 4 .gitignore).
+
+This separation was locked in during Phase 1-2 of the roadmap to keep the super-lamp AGI trading platform maintainable. Core trading evidence stays on experiment; platform polish and CI/safety tooling on feature branches.
+```

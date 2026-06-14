@@ -1,0 +1,3 @@
+# Ensure runtime/ directory is tracked in git (for project hygiene).
+# All runtime artifacts (*.csv, *.png, *.log, *.json, *.zip etc) are ignored via .gitignore.
+# Do not commit data here.

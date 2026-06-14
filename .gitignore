@@ -15,9 +15,11 @@ models/registry/
 models/best_eval_models/
 models/lstm_agi_trained*
 models/rainforest_*.pkl
+!models/.gitkeep
 
 # Logs & runtime state
 logs/
+!logs/.gitkeep
 .tmp/
 live_state.json
 models/registry/active.json
@@ -91,3 +93,78 @@ training/run_trading_env_quick_test.py
 audit_xauusd_*.csv
 artifacts/mql5_shadow_guidance/
 
+# === Phase 4 Runtime Hygiene (improve + expand per roadmap) ===
+# runtime/ artifacts - never commit data, csvs, images, logs, zips from runs (gate: no accidental commits)
+runtime/*.csv
+runtime/*.png
+runtime/*.zip
+runtime/*.log
+runtime/*.json
+runtime/*.bak
+runtime/*.txt
+runtime/*_raw*
+runtime/*_scorecard*
+runtime/champion_*
+# subdirs covered by prior + these
+runtime/agent_status/
+runtime/data_foundation/
+runtime/execution_reports/
+
+# logs/ - all runtime/training/audit logs (blanket reinforced)
+logs/
+
+# models/ artifacts (reinforce + catch all binaries; already had some at top)
+models/**/*.zip
+models/**/*.pkl
+models/**/*.pt
+models/**/*.pth
+models/**/*.h5
+models/**/*.onnx
+models/**/*.json
+models/**/active.json
+models/registry/
+models/dreamer/
+models/per_symbol/
+models/bundles/
+models/best_eval_models/
+
+# Node + dashboard / frontend / ui dists (expand coverage - only ui_lab_app was previously listed; add dashboard-mission-control + others)
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+ui_lab_app/node_modules/
+ui_lab_app/dist/
+ui_lab_app/.vite/
+
+# Also catch any stray at root or other (platform layer)
+**/node_modules/
+**/dist/
+
+# Broad runtime-ish at root level but only target known artifact patterns (avoid over-ignoring source csvs in docs/artifacts by using dir-specific where possible)
+# runtime/*.csv etc already above; for top-level stray use caution + git add -f for legitimate like results_trend_bias.log (but prefer move to logs/)
+# *.csv etc intentionally NOT blanket at root to preserve e.g. audit_xauusd_3000.csv , results.csv if source; they are covered by explicit lines above this file.
+
+# Ensure .gitkeep files (for dir hygiene) are NOT ignored - these lock the folders runtime/, logs/, models/
+!runtime/.gitkeep
+!logs/.gitkeep
+!models/.gitkeep
+!**/.gitkeep
+
+# Phase 4 runtime hygiene per full project-completion roadmap
+runtime/*.csv
+runtime/*.png
+runtime/*.zip
+runtime/*.log
+runtime/champion_*.zip
+logs/*.log
+models/**/*.zip
+models/**/*.pkl
+models/**/*.pt
+models/**/*.pth
+node_modules/
+dashboard/dist/
+ui_lab_app/dist/

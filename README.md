@@ -187,9 +187,13 @@ python training/run_real_feature_ablation.py \
 
 ---
 
-## Branch
+## Branch Strategy
 
-`experiment/xauusd-regime-baseline`
+**Trading core (do not mix platform changes here):** `experiment/xauusd-regime-baseline` (and safe descendants only for core DRL/regime/reward/training/execution changes).
+
+**Platform / UI / Ops layer:** `feature/dashboard-mission-control`, `feature/safety-registry-core`, `feature/ci-compile-gates`, `feature/runtime-hygiene`, `refactor/profitability-tier0-reward-structure`, `feature/*` (off `main`).
+
+See `SETUP.md` section 7 for full rules, separation of concerns, and "new branch first" hygiene. Never edit `main` or `experiment/xauusd-regime-baseline` directly.
 
 ## Status
 

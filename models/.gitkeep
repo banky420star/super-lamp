@@ -1,0 +1,3 @@
+# Ensure models/ directory is tracked in git (for project hygiene).
+# All model artifacts (*.zip *.pkl *.pt *.pth etc, registry contents) are gitignored.
+# Only structure and .gitkeep committed. Champion/canary state managed outside.

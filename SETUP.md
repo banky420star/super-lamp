@@ -115,9 +115,19 @@ git checkout -b feature/your-safe-work  # NEW BRANCH FIRST (per review feedback 
 git push -u origin feature/your-safe-work
 ```
 
-- Push experiment/feature branches freely (CI triggers on `experiment/**` and will run compile + tests).
+**Recommended clean branch strategy (Phases 1-4 project completion):**
+- `main`: integration point for releases; treat as protected (no direct edits).
+- `experiment/xauusd-regime-baseline`: **trading core only** — keep this as the long-lived home for DRL trading logic, regime experiments, reward functions, training core, feature engineering for models, execution, risk. This is the "super-lamp" AGI trading engine core. **Do not mix platform/UI changes here.**
+- `feature/dashboard-mission-control`: platform layer for React/frontend, dashboard UIs (mission control views, status, controls), launchers, top-level monitoring.
+- `feature/safety-registry-core`: platform layer for model registry, safety gates, promotion harnesses, champion/canary tools (non-core trading), audit, supervisor wrappers.
+- `feature/ci-compile-gates`, `feature/runtime-hygiene`: supporting platform/ops branches for CI rules, compile/test enforcement, runtime/ logs/ models/ artifact hygiene.
+- Other `feature/*` or `refactor/*` for safe work (e.g. current `refactor/profitability-tier0-reward-structure`).
+
+- **Separation rule (do not mix):** Trading core (dirs: drl/, training/ (core train scripts), Python/{data_feed.py,feature_pipeline.py,hybrid_brain.py,risk_engine.py,mt5_executor.py,model_registry.py (core),rewards/,...}, drl/trading_env.py etc.) lives exclusively on experiment lineage branches. Platform layer (frontend/, dashboard/, ui_*, alerts/, most tools/ UI scripts, launchers, api_server wrappers) on feature/ branches off main. Crossing the boundary requires explicit PR cross-review.
+- Push experiment/feature branches freely (CI triggers on `experiment/**` and will run compile + tests; feature/** too).
 - Create PRs on GitHub when ready (reference docs/FULL_STACK_PROFITABILITY_REVIEW.md for context).
 - Pull updates: `git pull origin main`.
+- Use `git worktree` if safe/needed for parallel branch work without polluting main tree (e.g. `git worktree add ../supreme-wt-dashboard feature/dashboard-mission-control`).
 - Desktop convenience copies: After any pull or edits, run `python tools/update_desktop_clean_copy.py` (regenerates SupremeChainsaw_Clean with the bucket layout: 01_Launchers, 02_Core_Python/* etc.). Do not commit inside the Desktop copies.
 - Never work from C:\windows\system32 or other system paths (they have been cleaned of stray copies).
 
