@@ -61,8 +61,10 @@ param(
     [int]$RestartCooldownSeconds = 30,
     [switch]$MonitorOnly,           # If set, never restart - only log/alert
     [switch]$DryRun,
-    [string]$HealthBase = "http://127.0.0.1:5050"
+    [string]$HealthBase = if ($env:AGI_PORT) { "http://127.0.0.1:$($env:AGI_PORT)" } else { "http://127.0.0.1:9090" }
 )
+
+if (-not $env:AGI_PORT) { $env:AGI_PORT = "9090" }
 
 # Operational Readiness improvements (2026-05-27):
 # - Fixed scoping, paper enforcement, MT5/disk/login guards
@@ -878,7 +880,8 @@ function Start-AgiServer {
     # Paper-trading safety defaults (override only if explicitly set to live by operator)
     if (-not $env:CHAIN_GAMBLER_EXECUTION_MODE) { $env:CHAIN_GAMBLER_EXECUTION_MODE = "paper" }
     if (-not $env:CHAIN_GAMBLER_ALLOW_LIVE) { $env:CHAIN_GAMBLER_ALLOW_LIVE = "0" }
-    Write-SupLog "INFO" "Launch env: MODE=$($env:CHAIN_GAMBLER_EXECUTION_MODE) ALLOW_LIVE=$($env:CHAIN_GAMBLER_ALLOW_LIVE)"
+    if (-not $env:AGI_PORT) { $env:AGI_PORT = "9090" }
+    Write-SupLog "INFO" "Launch env: MODE=$($env:CHAIN_GAMBLER_EXECUTION_MODE) ALLOW_LIVE=$($env:CHAIN_GAMBLER_ALLOW_LIVE) AGI_PORT=$($env:AGI_PORT)"
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $pythonExe
@@ -887,6 +890,7 @@ function Start-AgiServer {
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
     # Inherit current env (allows MT5_*, TELEGRAM_*, AGI_* overrides)
+    $psi.EnvironmentVariables["AGI_PORT"] = $env:AGI_PORT
 
     try {
         $proc = [System.Diagnostics.Process]::Start($psi)
