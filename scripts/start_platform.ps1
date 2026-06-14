@@ -62,12 +62,14 @@ if ($MyInvocation.MyCommand.Path -like "C:\windows\system32*" -or $scriptDir -li
 
 # Kill stale / duplicates (always for safety on orchestrator start, per vision; use -KillStale false? but param enables explicit)
 # IMPORTANT: never kill self (current $PID) even if cmdline matches
+# Legacy names (paper_mt5*, dashboard_backend, live_trade_lane, Server_AGI) are intentionally kept in the match list
+# so that any old/outdated processes from previous wiring are forcibly stopped before starting the current safe stack.
 if (-not $KillStale.IsPresent -or $KillStale) {
     Write-Host "Killing stale/duplicate processes (safety enforcement)..."
     $currentPid = $PID
     $pyKilled = 0
     Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
-        Where-Object { $_.ProcessId -ne $currentPid -and $_.CommandLine -and ($_.CommandLine -match 'Server_AGI|api_server|monitor_tui|paper_trader|paper_mt5|run_lane|dashboard_backend|live_trade_lane') } |
+        Where-Object { $_.ProcessId -ne $currentPid -and $_.CommandLine -and ($_.CommandLine -match 'Server_AGI|api_server|monitor_tui|paper_trader|paper_executor|paper_mt5|run_lane|dashboard_backend|live_trade_lane') } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $pyKilled++ }
     $psKilled = 0
     Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |

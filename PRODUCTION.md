@@ -171,7 +171,7 @@ docker compose down
 
 ## Paper Trading with Actual MT5 Execution (Critical Pre-Live Phase)
 
-**Harness:** `scripts/paper_mt5_execution_harness.py` (see full header + GO_LIVE_CHECKLIST.md Phase 2.1a)
+**Harness / Paper execution:** `python -m Python.paper_trader` (or via Python/execution/paper_executor.py + ExecutorRouter when using rich DecisionPPO/ExecutionAgent path). Legacy references to paper_mt5_execution_harness.py were cleaned (outdated, script no longer present; one-liner + promoter + supervisor now consistently use the maintained paper_trader entry for paper/demo). See scripts/start_platform.ps1 and promote_candidate_to_paper.py.
 
 **Quick Launch (DEMO account only — tiny fixed 0.01 lots):**
 ```powershell

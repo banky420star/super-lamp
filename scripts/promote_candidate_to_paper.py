@@ -692,8 +692,7 @@ def main():
         f"$env:AGI_PAPER_FIXED_LOT=\"0.01\"; "
         f"$env:AGI_CONSERVATIVE_PAPER=\"1\"; "
         f"$env:AGI_EXECUTION_TYPE=\"decision_ppo\"; "  # rich Decision PPO full specs (default); set simple_action for legacy
-        f"python scripts/paper_mt5_execution_harness.py "
-        f"--symbols {' '.join(args.symbols)} --max-days {args.max_days} --equity-start {args.equity_start} --execution-type decision_ppo"
+        f"python -m Python.paper_trader --symbols {' '.join(args.symbols)} --equity 10000 --no-ollama --cycles 0"
     )
 
     if args.auto_launch and not args.dry_run:
@@ -708,15 +707,16 @@ def main():
             env["AGI_CONSERVATIVE_PAPER"] = "1"
             env["AGI_EXECUTION_TYPE"] = execution_type  # decision_ppo default for rich Decision+Exec; simple_action for compat
             env.setdefault("AGI_EXECUTION_TYPE", "decision_ppo")  # default rich Decision + Exec layer for new promoted models
+            # Use current maintained paper entry (no longer wires the outdated/missing scripts/paper_mt5_execution_harness.py).
+            # Matches the canonical start_platform.ps1 -Paper behavior + rich execution when AGI_EXECUTION_TYPE=decision_ppo.
             proc = subprocess.Popen(
-                [sys.executable, "scripts/paper_mt5_execution_harness.py",
-                 "--symbols", *args.symbols, "--max-days", str(args.max_days), "--equity-start", str(args.equity_start),
-                 "--execution-type", args.execution_type],
+                [sys.executable, "-m", "Python.paper_trader",
+                 "--symbols", *args.symbols, "--equity", "10000", "--no-ollama", "--cycles", "0"],
                 cwd=PROJECT_ROOT, env=env,
                 stdout=open(LOGS / "paper_harness_promoted.log", "a"),
                 stderr=subprocess.STDOUT,
             )
-            logger.success(f"Harness launched (PID {proc.pid}). Monitor: logs/paper_harness_exec.jsonl + TUI")
+            logger.success(f"Paper trader (harness replacement) launched (PID {proc.pid}). Monitor: logs/paper_harness_exec.jsonl + TUI + /api/registry")
             audit_entry["harness_pid"] = proc.pid
 
             # Unified harness arm decision (closes promotion -> execution part of loop)

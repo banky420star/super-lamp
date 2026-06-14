@@ -118,11 +118,13 @@ if ($AutoPaper -or ($env:AGI_AUTO_PAPER_HARNESS -eq "1")) {
         $env:AGI_EXECUTION_TYPE="decision_ppo"
         if (-not $env:AGI_MULTI_TF_STANDARD) { $env:AGI_MULTI_TF_STANDARD="1" }
         if (-not $env:AGI_USE_BEST_FEATURES) { $env:AGI_USE_BEST_FEATURES="1" }
-        & $py "scripts\paper_mt5_execution_harness.py" --symbols $Symbol --max-days 7
+        # Use current paper entrypoint (no longer wires missing/outdated scripts\paper_mt5_execution_harness.py).
+        # Consistent with start_platform.ps1 -Paper and promoter --auto-launch.
+        & $py "-m" "Python.paper_trader" --symbols $Symbol --equity 10000 --no-ollama --cycles 0
     } catch {
-        Write-Output "Paper harness launch note: $($_.Exception.Message)"
+        Write-Output "Paper trader launch note: $($_.Exception.Message)"
     }
-    Write-Output "Decision PPO + Execution stack auto-started in PAPER mode (ExecutionAgent + TradeDecision). Will transition to live on manual supervisor gate after validation. Uses multi-TF context + configs/best_features_per_symbol.yaml per symbol."
+    Write-Output "Paper trader (DecisionPPO+Exec rich stack via router/executor) auto-started in PAPER mode. Consistent with one-liner. Will only promote/transition after full gates. Multi-TF + best features per symbol."
 }
 
 # 4. MQL5 shadow prep (strengthened for zero-touch Python->MQL5 handoff; promoter now auto-triggers too)

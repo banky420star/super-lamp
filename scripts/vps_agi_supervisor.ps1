@@ -85,7 +85,7 @@ if (-not $env:AGI_PORT) { $env:AGI_PORT = "9090" }
 # - Rollback triggers: manual flag, loss breach (timing respected), canary violation (incl. timing degrade), consecutive errors
 # - To run unsupervised live: set AGI_EXECUTION_TYPE=decision_ppo; monitor TUI/decision_ppo_execution_live.json + timing fields in canary artifacts
 # - Regression: tests/test_risk_supervisor.py + test_order_manager.py cover new paths
-# - See: Python/execution/execution_agent.py (force_flatten + compute_lots), risk_engine.py, canary/*, paper_mt5_execution_harness.py, runtime/agent_status/production_hardening_timing_agent.json
+# - See: Python/execution/execution_agent.py (force_flatten + compute_lots), risk_engine.py, canary/*, Python/paper_trader.py + paper_executor.py (via ExecutorRouter for paper_sim), runtime/agent_status/production_hardening_timing_agent.json
 # Full ops: docs/DECISION_EXECUTION_ARCHITECTURE.md + GO_LIVE_CHECKLIST.md (timing section)
 
 $ErrorActionPreference = "Stop"
@@ -325,7 +325,7 @@ function Test-PaperHarnessRunning {
         if ($rows) {
             foreach ($p in $rows) {
                 $cmd = ([string]$p.CommandLine).ToLower().Replace("\", "/")
-                if ($cmd -match "paper_mt5_execution_harness") { return $true }
+                if ($cmd -match "paper_mt5_execution_harness|paper_trader|paper_executor") { return $true }
             }
         }
     } catch {}
@@ -808,11 +808,12 @@ powershell -File launch_tui.ps1 -Watcher -Persistent
                 "AGI_USE_BEST_FEATURES" = "1"
                 "AGI_BEST_FEATURES_CONFIG" = "configs/best_features_per_symbol.yaml"
             }
-            Write-SupLog "SUCCESS" "Supervisor auto-starting DecisionPPO+Execution paper harness (rich specs, MTF+best_features context) for $candName"
-            # Launch harness detached (it will use execution_type from paper_harness_start.json written by promoter, or env)
-            $harnessArgs = "-NoProfile -ExecutionPolicy Bypass -Command `"cd '$RepoRoot'; `$env:CHAIN_GAMBLER_EXECUTION_MODE='demo'; `$env:AGI_EXECUTION_TYPE='decision_ppo'; `$env:AGI_MULTI_TF_STANDARD='1'; `$env:AGI_USE_BEST_FEATURES='1'; & '$pythonExe' 'scripts\paper_mt5_execution_harness.py' --symbols BTCUSDm --max-days 7 --equity-start 5000`""
+            Write-SupLog "SUCCESS" "Supervisor auto-starting DecisionPPO+Execution paper (via current paper_trader for visibility + rich exec path) for $candName"
+            # Use the maintained paper entrypoint (matches start_platform one-liner). Avoids wiring outdated missing paper_mt5_execution_harness.py.
+            # The rich DecisionPPO/ExecutionAgent + PaperExecutor is used internally when mode=paper_sim + execution_type=decision_ppo.
+            $harnessArgs = "-NoProfile -ExecutionPolicy Bypass -Command `"cd '$RepoRoot'; `$env:CHAIN_GAMBLER_EXECUTION_MODE='demo'; `$env:AGI_EXECUTION_TYPE='decision_ppo'; `$env:AGI_MULTI_TF_STANDARD='1'; `$env:AGI_USE_BEST_FEATURES='1'; & '$pythonExe' '-m' 'Python.paper_trader' --symbols BTCUSDm --equity 10000 --no-ollama --cycles 0`""
             Start-Process -FilePath "powershell.exe" -ArgumentList $harnessArgs -WindowStyle Hidden -WorkingDirectory $RepoRoot
-            Write-SupLog "INFO" "DecisionPPO paper harness launch requested (will respect rollback flag for flatten)"
+            Write-SupLog "INFO" "Paper trader (harness replacement) launch requested (will respect rollback flag for flatten)"
             # Live transition marker: after X clean days harness self or supervisor can flip to real_live (future: add live_gate check + tiny risk)
             "decision_ppo_paper_armed=$ts" | Out-File -FilePath (Join-Path $runtime "decision_ppo_paper_armed.flag") -Encoding UTF8 -Force
         } catch {
@@ -833,11 +834,12 @@ powershell -File launch_tui.ps1 -Watcher -Persistent
         # Explicit auto-start of paper harness in DecisionPPO rich mode (supervisor closure of autonomous loop)
         try {
             $paperEnv = '$env:AGI_EXECUTION_TYPE="decision_ppo"; $env:AGI_MULTI_TF_STANDARD="1"; $env:AGI_USE_BEST_FEATURES="1"; $env:CHAIN_GAMBLER_EXECUTION_MODE="demo"; $env:AGI_PAPER_FIXED_LOT="0.01"'
-            Write-SupLog "INFO" "Auto-launching paper harness with Decision PPO + Execution layer (rich specs + MTF/best-feats)..."
-            Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "`"$paperEnv; python scripts\paper_mt5_execution_harness.py --symbols BTCUSDm --max-days 7`"" -WindowStyle Hidden -WorkingDirectory $RepoRoot
-            Write-SupLog "SUCCESS" "DecisionPPO+Exec paper harness auto-started under supervisor (will transition to live after validation gates)."
+            Write-SupLog "INFO" "Auto-launching paper trader (current maintained entrypoint for paper/demo harness + rich DecisionPPO+Exec)..."
+            # No longer wires the outdated/missing scripts/paper_mt5_execution_harness.py . Uses the same as the canonical start_platform one-liner.
+            Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "`"$paperEnv; python -m Python.paper_trader --symbols BTCUSDm --equity 10000 --no-ollama --cycles 0`"" -WindowStyle Hidden -WorkingDirectory $RepoRoot
+            Write-SupLog "SUCCESS" "Paper trader (DecisionPPO+Exec paper) auto-started under supervisor (respects gates, will transition only after full validation)."
         } catch {
-            Write-SupLog "WARN" "Auto paper harness (rich) launch note: $($_.Exception.Message)"
+            Write-SupLog "WARN" "Auto paper (trader) launch note: $($_.Exception.Message)"
         }
     } else {
         Write-SupLog "INFO" "SAFE MODE (no auto env gate): Commands + guidance prepared. Promoter/MQL5 NOT auto-executed. Set AGI_AUTO_PROMOTE_CANDIDATE=1 then re-detect (or run commands above) for full automatic handoff on this v4 candidate."

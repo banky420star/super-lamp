@@ -139,10 +139,10 @@ The code can be healthy while the live bot still stays flat if the currently pro
 
 ## 9. UI / Dashboard (profitability-tier0-reward focus)
 
-- Lane B real-time dashboard (status, trades, equity, control for the live lanes):
-  Start: `python training/dashboard_backend.py` (or via launch_full_project / DesktopLaunchers)
-  URL: http://localhost:5051/
-  Port override: `$env:DASHBOARD_PORT=5052 ; python training/dashboard_backend.py`
+- Dashboard / status (per-symbol training, equity, candidates/champions, gates, safety, paper trades, decisions+reasons):
+  Start: via the canonical `powershell -File .\scripts\start_platform.ps1 -Mode paper -Symbols "XAUUSDm,BTCUSDm" -Dashboard -Train -Paper -PromoteAfterGates`
+  (or directly: `python -m Python.api_server` on 5050 + `cd frontend; npm run dev` on 5173 with proxy; or launch_full_project.ps1)
+  UI: http://localhost:5173/ (React, proxies /api to 5050) or http://localhost:5050/ (static SPA fallback + data)
 
 - The resolver for feature_version now lives in Python/config_utils.resolve_drl_feature_version (central, testable, with clear provenance: env / cfg / default). This was extracted as part of the structural cleanup on the `refactor/profitability-tier0-reward-structure` branch.
 
