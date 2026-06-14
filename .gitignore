@@ -22,6 +22,10 @@ logs/
 live_state.json
 models/registry/active.json
 risk_supervisor_state.json
+runtime/agent_status/
+runtime/lane_b_*_status.json
+runtime/*_pid.txt
+
 
 # Secrets / local config
 .env

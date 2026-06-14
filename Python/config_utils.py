@@ -153,3 +153,52 @@ def load_project_config(project_root: str, live_mode: bool = False) -> dict[str,
             )
 
     return cfg
+
+
+# --- DRL / profitability training option resolution (extracted for testability and clarity) ---
+
+try:
+    from Python.feature_pipeline import ENGINEERED_V2, normalize_feature_version
+except Exception:
+    ENGINEERED_V2 = "engineered_v2"
+    def normalize_feature_version(v, default=ENGINEERED_V2):
+        v = str(v or default).strip().lower()
+        return v if v in {"engineered_v2", "ultimate_150"} else str(default)
+
+
+def resolve_drl_feature_version(
+    drl_cfg: dict | None = None,
+    default: str | None = None,
+    env_key: str = "AGI_FEATURE_VERSION",
+) -> tuple[str, str]:
+    """
+    Resolve the effective feature_version with explicit precedence and provenance.
+
+    Precedence (highest to lowest):
+      1. $AGI_FEATURE_VERSION (or env_key) - for CI overrides and experiments
+      2. drl.feature_version from config
+      3. the passed default (normally ENGINEERED_V2 from feature_pipeline)
+
+    Symbol-level overrides are applied later in the caller (see training.train_drl).
+
+    Returns:
+        (normalized_version, source) where source is one of "env", "cfg", or "default"
+    """
+    drl_cfg = drl_cfg or {}
+    default = default or ENGINEERED_V2
+
+    env_val = os.environ.get(env_key)
+    cfg_val = drl_cfg.get("feature_version") if isinstance(drl_cfg, dict) else None
+
+    if env_val:
+        source = "env"
+        raw = env_val
+    elif cfg_val:
+        source = "cfg"
+        raw = cfg_val
+    else:
+        source = "default"
+        raw = default
+
+    version = normalize_feature_version(raw, default=default)
+    return version, source

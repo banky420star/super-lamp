@@ -16,6 +16,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from typing import Callable
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
@@ -225,6 +226,55 @@ class TestEnvCreation:
         assert isinstance(truncated, (bool, np.bool_))
 
 
+def _assert_actor_critic_regime_independence(
+    policy,
+    make_env: Callable,
+    *,
+    n_samples: int = 20,
+    min_weight_diff: float = 1e-4,
+) -> tuple[float, float]:
+    """
+    Structural-first check that actor and critic regime heads are independent.
+
+    Prefers direct weight inspection (different params after different gradient paths)
+    over behavioral sampling. Falls back to sampling only if weights are nearly identical
+    (possible on very short training runs).
+
+    Returns (agreement, weight_diff) for reporting.
+    """
+    assert policy.regime_classifier is not policy.value_classifier, "Shared classifier module (not independent)"
+
+    rc_w = policy.regime_classifier.weight.detach().cpu().numpy()
+    vc_w = policy.value_classifier.weight.detach().cpu().numpy()
+    weight_diff = float(np.abs(rc_w - vc_w).max())
+
+    agreement = 1.0
+    if weight_diff < min_weight_diff:
+        disagreed = False
+        for _ in range(n_samples):
+            o, _ = make_env().reset()
+            ot = th.as_tensor(o[None, :], dtype=th.float32, device=policy.device)
+            rp = policy.get_regime_probs(ot)
+            vp = policy.get_value_regime_probs(ot)
+            agreement = float(rp[0].argmax() == vp[0].argmax())
+            if agreement < 1.0:
+                disagreed = True
+                break
+        assert disagreed or weight_diff >= min_weight_diff, (
+            f"Actor and critic regime classifiers appear identical "
+            f"(max weight diff={weight_diff:.2e}; no argmax disagreement in {n_samples} samples)"
+        )
+    else:
+        # Compute one representative agreement for logging
+        o, _ = make_env().reset()
+        ot = th.as_tensor(o[None, :], dtype=th.float32, device=policy.device)
+        rp = policy.get_regime_probs(ot)
+        vp = policy.get_value_regime_probs(ot)
+        agreement = float(rp[0].argmax() == vp[0].argmax())
+
+    return agreement, weight_diff
+
+
 @pytest.mark.slow
 class TestRegimeRoutedPPOTraining:
     """Full training pipeline integration test."""
@@ -318,39 +368,9 @@ class TestRegimeRoutedPPOTraining:
         value_probs = policy.get_value_regime_probs(obs_tensor)
         assert value_probs.shape == (1, 5)
 
-        # Structural + statistical independence of actor vs critic regime heads.
-        # The two classifiers are separate modules (different params, different gradient paths:
-        # actor gets regime_supervised_loss + policy loss; critic gets value loss only).
-        assert policy.regime_classifier is not policy.value_classifier, "Shared classifier module (not independent)"
-
-        rc_w = policy.regime_classifier.weight.detach().cpu().numpy()
-        vc_w = policy.value_classifier.weight.detach().cpu().numpy()
-        weight_diff = float(np.abs(rc_w - vc_w).max())
-        # After training they should have diverged; allow tiny diff on very short runs.
-        if weight_diff < 1e-4:
-            # Fallback to sampling (non-deterministic but proves different behavior)
-            disagreed = False
-            for _ in range(20):
-                o, _ = make_env().reset()
-                ot = th.as_tensor(o[None, :], dtype=th.float32, device=policy.device)
-                rp = policy.get_regime_probs(ot)
-                vp = policy.get_value_regime_probs(ot)
-                if rp[0].argmax() != vp[0].argmax():
-                    disagreed = True
-                    regime_probs, value_probs = rp, vp
-                    break
-            assert disagreed or weight_diff >= 1e-4, (
-                f"Actor and critic regime classifiers appear identical "
-                f"(max weight diff={weight_diff:.2e}; no argmax disagreement in 20 samples)"
-            )
-
-        # For reporting, compute one sample agreement
-        o, _ = make_env().reset()
-        ot = th.as_tensor(o[None, :], dtype=th.float32, device=policy.device)
-        rp = policy.get_regime_probs(ot)
-        vp = policy.get_value_regime_probs(ot)
-        agreement = float(rp[0].argmax() == vp[0].argmax())
-        regime_probs, value_probs = rp, vp
+        agreement, weight_diff = _assert_actor_critic_regime_independence(
+            policy, make_env, n_samples=20, min_weight_diff=1e-4
+        )
 
         print(f"\nIntegration test results:")
         print(f"  Actor regime probs:    {regime_probs[0].detach().cpu().numpy()}")

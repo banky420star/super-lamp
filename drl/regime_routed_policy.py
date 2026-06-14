@@ -66,8 +66,16 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
     ActorCriticPolicy with regime-routed action heads and an independent
     regime-conditional value function.
 
-    Actor: latent_pi -> actor_regime_classifier -> regime_probs -> weight action_nets
-    Critic: latent_vf -> value_classifier -> value_probs -> weight value_nets
+    Public API (for tests, introspection, and downstream code):
+      - regime_classifier: actor's regime head (Linear)
+      - value_classifier: critic's independent regime head (exposed via @property for symmetry;
+        implementation lives in self.value_net.value_classifier)
+
+    Actor: latent_pi -> regime_classifier -> regime_probs -> weight regime_action_nets
+    Critic: latent_vf -> value_classifier -> value_probs -> weight regime_value_nets
+
+    The two classifiers are deliberately separate so actor (policy + supervised regime loss)
+    and critic (value) can learn different regime decompositions without gradient interference.
     """
 
     def __init__(
@@ -118,14 +126,15 @@ class RegimeRoutedActorCriticPolicy(ActorCriticPolicy):
         ])
 
         # Critic: independent regime classifier (on latent_vf)
-        # Replaces the single value_net with regime-weighted ensemble
+        # Replaces the single value_net with regime-weighted ensemble.
+        # The classifier is exposed publicly via the @property value_classifier above
+        # (we use a property rather than direct attribute assignment to avoid
+        # double submodule registration for the LR grouping in _rebuild_optimizer).
         self.value_net = _RegimeWeightedValue(
             self.regime_value_nets,
             vf_latent_dim,
             self.num_regimes,
         )
-        # Note: value_classifier is exposed via @property below (no direct submodule
-        # assignment to avoid double registration of params under value_net + value_classifier).
 
         # Initialise — match SB3's standard action_net gain (0.01) so actions
         # start near zero and the policy explores before saturating at ±1.

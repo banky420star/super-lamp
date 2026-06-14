@@ -27,7 +27,7 @@ try:
     from drl.regime_detector import NUM_REGIMES
 except ImportError:
     NUM_REGIMES = 5
-from Python.config_utils import DEFAULT_TRADING_SYMBOLS, load_project_config, resolve_trading_symbols
+from Python.config_utils import DEFAULT_TRADING_SYMBOLS, load_project_config, resolve_trading_symbols, resolve_drl_feature_version
 from Python.data_feed import fetch_training_data, get_combined_training_df
 from Python.feature_pipeline import ENGINEERED_V2, ULTIMATE_150, normalize_feature_version
 from Python.trade_learning import load_trade_memory
@@ -362,12 +362,17 @@ def _resolve_symbol_training_options(cfg: dict, symbols: list[str], default_feat
     drl_cfg = cfg.get("drl", {}) if isinstance(cfg.get("drl", {}), dict) else {}
     reward_cfg = dict(drl_cfg.get("reward", {}) or {}) if isinstance(drl_cfg.get("reward", {}), dict) else {}
     action_cfg = {}
-    env_feature_version = os.environ.get("AGI_FEATURE_VERSION")
-    cfg_feature_version = drl_cfg.get("feature_version")
-    raw_fv = env_feature_version or cfg_feature_version or default_feature_version
-    feature_version = normalize_feature_version(raw_fv, default=default_feature_version)
-    if env_feature_version and env_feature_version != cfg_feature_version:
-        logger.info(f"AGI_FEATURE_VERSION env={env_feature_version} overriding config feature_version={cfg_feature_version} (using {feature_version})")
+    # Use the centralized resolver (see Python/config_utils.py) for clear precedence + provenance.
+    # This keeps the "magic" (env vs cfg vs default) in one testable place instead of
+    # scattering it through training and tests.
+    feature_version, fv_source = resolve_drl_feature_version(
+        drl_cfg,
+        default=default_feature_version,
+    )
+    if fv_source == "env":
+        logger.info(f"feature_version resolved from env (AGI_FEATURE_VERSION) -> {feature_version}")
+    elif fv_source == "cfg":
+        logger.debug(f"feature_version from drl config -> {feature_version}")
 
     if len(symbols) == 1:
         symbol = str(symbols[0])

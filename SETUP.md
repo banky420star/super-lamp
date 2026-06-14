@@ -126,3 +126,14 @@ See also PRODUCTION.md (Upgrading section) and the profitability review in docs/
 ## 8. Operational note
 
 The code can be healthy while the live bot still stays flat if the currently promoted champion is weak. Training/promoting updated artifacts is a separate step from code hygiene.
+
+## 9. UI / Dashboard (profitability-tier0-reward focus)
+
+- Lane B real-time dashboard (status, trades, equity, control for the live lanes):
+  Start: `python training/dashboard_backend.py` (or via launch_full_project / DesktopLaunchers)
+  URL: http://localhost:5051/
+  Port override: `$env:DASHBOARD_PORT=5052 ; python training/dashboard_backend.py`
+
+- The resolver for feature_version now lives in Python/config_utils.resolve_drl_feature_version (central, testable, with clear provenance: env / cfg / default). This was extracted as part of the structural cleanup on the `refactor/profitability-tier0-reward-structure` branch.
+
+- Independence checks for regime heads (actor vs critic) are now in a reusable `_assert_actor_critic_regime_independence` helper in the integration test.
