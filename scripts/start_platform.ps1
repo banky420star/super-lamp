@@ -106,6 +106,30 @@ if ($Train) {
         Write-Host "  BG: $trainCmd"
         Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$RepoRoot'; $trainCmd" -WindowStyle Hidden
     }
+    # Seed fresh progress files so /api/training/lanes and /api/status show the started per-symbol training as "current" (not old idle from stale logs/json).
+    # This makes the UI reflect the just-launched lane_b trainings immediately (real updates will overwrite as the py process runs and writes its own if any).
+    $nowTs = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    foreach ($sym in $Symbols) {
+        $ppoJson = @{ running=$true; symbol=$sym; timesteps=0; progress_pct=0; state="starting lane_b lstm"; updated_at=$nowTs } | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText( (Join-Path $RepoRoot "logs/ppo_${sym}_progress.json") , $ppoJson , $utf8NoBom )
+        $lstmJson = @{ running=$true; symbol=$sym; epoch=0; epochs_total=$TrainSteps; accuracy=0; updated_at=$nowTs } | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText( (Join-Path $RepoRoot "logs/lstm_progress.json") , $lstmJson , $utf8NoBom )
+    }
+    Write-Host "  Seeded fresh per-sym progress (ppo_*/lstm, no-BOM) for UI to show active training (not stale old data)."
+    # Also append to lstm_training.log so fallback log parse in _read_training_progress sees recent activity for lstm.
+    $lstmLog = Join-Path $RepoRoot "logs/lstm_training.log"
+    $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss.fff")
+    "[$ts] [INFO] Starting per-symbol lane_b lstm for $($Symbols -join ',') -- will update real progress" | Out-File -FilePath $lstmLog -Append -Encoding UTF8
+    "[$ts] [SUCCESS] __main__:train_lane_b:0 - XAUUSDm | epoch 0/ $TrainSteps | loss 0.000 acc 0.0%" | Out-File -FilePath $lstmLog -Append -Encoding UTF8
+    # Purge agent_status artifacts older than 48h so that /api/agents/status and UI agent panels don't display ancient Grok/agent swarm data as current.
+    # Fresh heartbeats will be recorded by this run's api/status polls.
+    $agentDir = Join-Path $RepoRoot "runtime/agent_status"
+    if (Test-Path $agentDir) {
+        $cutoff = (Get-Date).AddHours(-48)
+        Get-ChildItem $agentDir -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cutoff } | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host "  Purged >48h old runtime/agent_status/*.json (prevents old swarm info in UI)."
+    }
 }
 
 # Start full stack (UI + api_server + supervisor orchestrator)

@@ -58,7 +58,7 @@ export function extractAgentStatus(status: StatusPayload): AgentStatus[] {
       role: 'Ingestion & Normalization',
       status: status.server?.running ? 'Online' : 'Error',
       lastActivity: `Updated ${fmtTime(status.server?.pids?.length ? now.toISOString() : undefined)}`,
-      metric: `Candles/min: ${status.server?.running ? '12' : '0'}`,
+      metric: `Server pids: ${status.server?.pids?.length ?? 0}`,
       logs: logs.data_feed ?? 'Polling market data streams...',
     },
     {
@@ -127,7 +127,7 @@ export function extractAgentStatus(status: StatusPayload): AgentStatus[] {
       role: 'NLP & Event Scoring',
       status: 'Idle',
       lastActivity: `Idle ${fmtTime()}`,
-      metric: 'Score: neutral',
+      metric: 'NLP: awaiting key/data',
       logs: logs.sentiment ?? 'News feed scanner inactive — no API key.',
     },
     {
