@@ -62,7 +62,7 @@ jobs:
               print('All .py files compiled successfully.')
           "
 
-      - name: Run tests (strict unit: no slow, no training, no MT5/broker per Phase 3 gate)
+      - name: 'Run tests (strict unit: no slow, no training, no MT5/broker per Phase 3 gate)'
         run: |
           python -m pytest -q -m "not slow" \
             --ignore=tests/test_enhanced_training.py \
@@ -144,15 +144,15 @@ jobs:
       - name: Enforce no MT5 / broker / heavy-training in Ubuntu pair CI (gate)
         run: |
           python -c '
-import sys
-print("Pair CI platform:", sys.platform)
-try:
-    import MetaTrader5 as mt5
-    print("FAIL: MT5 on ubuntu"); sys.exit(1)
-except ImportError:
-    print("✓ Pair OK: no MT5/broker (stub only)")
-print("✓ Ubuntu pair-pipeline limited to compile + scoped unit (smoke tests only; no full training runs, no MT5). See Phase 3.")
-'
+          import sys
+          print("Pair CI platform:", sys.platform)
+          try:
+              import MetaTrader5 as mt5
+              print("FAIL: MT5 on ubuntu"); sys.exit(1)
+          except ImportError:
+              print("✓ Pair OK: no MT5/broker (stub only)")
+          print("✓ Ubuntu pair-pipeline limited to compile + scoped unit (smoke tests only; no full training runs, no MT5). See Phase 3.")
+          '
       - name: Verify Pair Pipeline (smoke / symbol scope only - no heavy training)
         run: |
           python -m pytest -q \
