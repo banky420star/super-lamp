@@ -478,6 +478,54 @@ class RainforestDetector:
     # Pattern reporting
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # ML Signal (directional probability from regime probabilities)
+    # ------------------------------------------------------------------
+
+    def predict_ml_signal(self, df) -> "np.ndarray":
+        """
+        Produce per-bar directional signals in [0, 1] from regime probabilities.
+
+        Maps bullish regimes (bull_trend, breakout_up, reversal_up) to up-probability
+        and bearish regimes to down-probability. Returns a continuous signal
+        that can be used as an ml_signal feature in the PPO observation space.
+
+        Returns:
+            (n, 1) array of ml_signal values in [0, 1]. 0.5 = neutral.
+        """
+        if not self.is_trained():
+            n = len(df) if hasattr(df, "__len__") else 1
+            return np.full((n, 1), 0.5, dtype=np.float32)
+
+        _require_numpy_pandas()
+        X = self.extract_features(df)
+        n = len(X)
+        if n == 0:
+            return np.full((1, 1), 0.5, dtype=np.float32)
+
+        X_clean = np.nan_to_num(X, nan=0.0)
+        proba = self._model.predict_proba(X_clean)
+
+        # Bullish vs bearish regime mapping
+        up_regimes = {"bull_trend", "breakout_up", "reversal_up"}
+        down_regimes = {"bear_trend", "breakout_down", "reversal_down"}
+
+        up_indices = [i for i, c in enumerate(self._classes) if c in up_regimes]
+        down_indices = [i for i, c in enumerate(self._classes) if c in down_regimes]
+
+        prob_up = proba[:, up_indices].sum(axis=1) if up_indices else np.zeros(n)
+        prob_down = proba[:, down_indices].sum(axis=1) if down_indices else np.zeros(n)
+
+        total = prob_up + prob_down + 1e-12
+        signal = (prob_up / total).astype(np.float32).reshape(-1, 1)
+
+        return signal
+
+    def export_feature_importances(self) -> dict:
+        """Export cached feature importances for audit integration."""
+        return dict(self._feature_importances)
+
+
     def get_top_patterns(self, n: int = 10) -> list[dict]:
         """Return top N patterns by feature importance."""
         if not self._feature_importances:

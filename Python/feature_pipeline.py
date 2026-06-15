@@ -10,7 +10,7 @@ except Exception:
     PatternDetector = None
     PATTERN_FEATURE_NAMES = []
 from Python.cross_asset import compute_cross_asset_features, TOTAL_CROSS_FEATURES
-from Python.ml_signal import compute_ml_signal, ML_SIGNAL_FEATURES
+from Python.ml_signal import compute_ml_signal, compute_rainforest_ml_signal, ML_SIGNAL_FEATURES, RF_ML_SIGNAL_FEATURES
 
 
 ENGINEERED_V2 = "engineered_v2"
@@ -116,7 +116,7 @@ def feature_count_for_version(feature_version: str) -> int:
         }
     )
     base_count = int(_build_engineered_env_matrix(sample).shape[1])
-    return base_count + TOTAL_CROSS_FEATURES + ML_SIGNAL_FEATURES
+    return base_count + TOTAL_CROSS_FEATURES + ML_SIGNAL_FEATURES + RF_ML_SIGNAL_FEATURES
 
 
 def expected_obs_dim(feature_version: str, window: int = 100) -> int:
@@ -338,6 +338,15 @@ def _build_engineered_env_matrix(df: pd.DataFrame, symbol: str = "") -> np.ndarr
                 matrix = np.column_stack([matrix, ml_signal])
         except Exception:
             pass  # ML signal unavailable; continue without
+
+    # Rainforest regime-based directional signal (derived from regime probabilities)
+    if symbol and matrix.shape[1] >= 40:
+        try:
+            rf_signal = compute_rainforest_ml_signal(symbol, out)
+            if rf_signal.shape[1] > 0:
+                matrix = np.column_stack([matrix, rf_signal])
+        except Exception:
+            pass  # Rainforest signal unavailable; continue without
     return np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
 
 
@@ -468,6 +477,14 @@ def _build_ultimate_feature_frame(df: pd.DataFrame) -> pd.DataFrame:
     feature_df = pd.DataFrame(feats, index=out.index)
     feature_df = feature_df.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0.0)
     return feature_df.astype(np.float32)
+
+# Register Rainforest ml_signal in the feature registry at module load time
+try:
+    from Python.features.feature_registry import FeatureRegistry, register_rainforest_ml_signal
+    _rf_registry = FeatureRegistry()
+    register_rainforest_ml_signal(_rf_registry)
+except Exception:
+    pass  # Registry registration is non-critical
 
 # ============================================================
 # NEW STANDARD: Multi-Timeframe per Symbol (1m + 5m + 15m + 1h)

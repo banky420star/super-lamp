@@ -180,3 +180,21 @@ class FeatureRegistry:
             if not matched:
                 self.register(feature_name=name, family="unknown")
         return self
+
+
+# ---------------------------------------------------------------------------
+# Rainforest ml_signal feature registration helper
+# ---------------------------------------------------------------------------
+
+def register_rainforest_ml_signal(registry: "FeatureRegistry") -> None:
+    """Register the Rainforest-derived ml_signal in the ml_signal family."""
+    registry.register(
+        feature_name="rf_ml_signal",
+        family="ml_signal",
+        source_columns=["close", "open", "high", "low", "volume"],
+        lookback_bars=60,
+        allowed_live=True,
+        leakage_risk="low",
+        status="enabled",
+        notes="Rainforest regime-derived directional signal in [0,1] from predict_proba",
+    )

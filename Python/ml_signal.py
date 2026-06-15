@@ -27,6 +27,9 @@ ML_SIGNAL_FEATURES = 1
 # Module-level cached model to avoid re-training across parallel vectorized envs
 _ml_model_cache = {"model": None, "n_samples": 0, "n_features": 0}
 
+# Module-level cache for Rainforest detector (avoid joblib.load on every env step)
+_rf_cache: dict = {"detector": None, "symbol": ""}
+
 
 def compute_ml_signal(
     feature_matrix: np.ndarray,
@@ -106,3 +109,75 @@ def compute_ml_signal(
     _ml_model_cache["n_samples"] = n
     _ml_model_cache["n_features"] = feature_matrix.shape[1]
     return proba.astype(np.float32).reshape(-1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Rainforest ml_signal — derived from RainforestDetector regime probabilities
+# ---------------------------------------------------------------------------
+
+RF_ML_SIGNAL_FEATURES = 1
+"""Number of Rainforest ML signal features appended to the observation matrix."""
+
+
+def compute_rainforest_ml_signal(
+    symbol: str,
+    df: pd.DataFrame,
+) -> np.ndarray:
+    """
+    Compute Rainforest-based ml_signal from OHLCV data.
+
+    Uses the RainforestDetector to produce per-bar directional signals
+    in [0, 1] from regime probabilities. Maps bullish regimes
+    (bull_trend, breakout_up, reversal_up) to up-probability.
+
+    This signal is complementary to compute_ml_signal() which trains its
+    own XGBoost/RF model — the Rainforest version derives direction from
+    regime classification probabilities.
+
+    Args:
+        symbol: Trading symbol (e.g. "XAUUSDm").
+        df: OHLCV DataFrame with columns open, high, low, close, volume.
+
+    Returns:
+        (n_timesteps, 1) array of ml_signal values in [0, 1].
+        Returns 0.5 (neutral) if detector is unavailable or untrained.
+    """
+    n = len(df)
+    if n < 50:
+        return np.full((n, 1), 0.5, dtype=np.float32)
+
+    global _rf_cache
+
+    # Use cached detector if symbol matches (avoids joblib.load on every env step)
+    if _rf_cache["detector"] is not None and _rf_cache["symbol"] == symbol:
+        try:
+            return _rf_cache["detector"].predict_ml_signal(df)
+        except Exception:
+            pass  # Fall through to reload
+
+    try:
+        from Python.rainforest_detector import RainforestDetector
+
+        detector = RainforestDetector()
+        safe_sym = symbol.replace("/", "_")
+        import os as _os
+        model_path = _os.path.join(
+            _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+            "models",
+            f"rainforest_{safe_sym}.pkl",
+        )
+        loaded = detector.load(model_path)
+        if not loaded and not detector.is_trained():
+            detector.train_from_mt5_data(symbol)
+
+        if not detector.is_trained():
+            return np.full((n, 1), 0.5, dtype=np.float32)
+
+        # Cache for subsequent calls
+        _rf_cache["detector"] = detector
+        _rf_cache["symbol"] = symbol
+
+        return detector.predict_ml_signal(df)
+
+    except Exception:
+        return np.full((n, 1), 0.5, dtype=np.float32)

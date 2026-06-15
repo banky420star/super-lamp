@@ -36,7 +36,7 @@ _data_feed_load = None
 
 def _lazy_imports():
     global _data_foundation, _model_registry, _promotion_gates
-    global _feature_registry_data, _pipeline_audit_funcs, _safety_gates_func, _event_intel_func, _data_feed_load
+    global _feature_registry_data, _pipeline_audit_funcs, _safety_gates_func, _event_intel_func, _data_feed_load, _rainforest_detector, _reversal_detector
 
     try:
         from Python.data.provenance import DataFoundation
@@ -96,7 +96,7 @@ def _lazy_imports():
     try:
         from Python.rainforest_detector import RainforestDetector
         _rainforest_detector = RainforestDetector()
-        model_path = str(PROJECT_ROOT / 'models' / 'rainforest_model.joblib')
+        model_path = str(PROJECT_ROOT / 'models' / 'rainforest_XAUUSDm.pkl')
         if os.path.exists(model_path):
             _rainforest_detector.load(model_path)
         else:
@@ -769,11 +769,33 @@ async def get_patterns():
 @app.get("/api/patterns/rainforest")
 async def get_rainforest():
     """Rainforest regime detection + top contributing patterns."""
-    result = {"regime": None, "confidence": 0, "patterns": []}
+    result = {"regime": None, "confidence": 0, "patterns": [], "source": "live"}
     if _rainforest_detector:
         try:
+            def _gen_synth(n=500):
+                import numpy as _np, pandas as _pd
+                _rng = _np.random.RandomState(42)
+                _idx = _pd.date_range('2026-01-01', periods=n, freq='5min')
+                _px = 2500.0 + _np.cumsum(_rng.randn(n) * 0.5)
+                _df = _pd.DataFrame(index=_idx)
+                _df['open'] = _px
+                _df['high'] = _px + abs(_rng.randn(n) * 2.0)
+                _df['low'] = _px - abs(_rng.randn(n) * 2.0)
+                _df['close'] = _px + _rng.randn(n)
+                _df['volume'] = _rng.randint(50, 2000, n)
+                return _df
+
             def _rf_predict():
-                df = _data_feed_load("XAUUSDm", "M5", 500)
+                df = None
+                if _data_feed_load is not None:
+                    try:
+                        df = _data_feed_load("XAUUSDm", "M5", 500)
+                    except Exception as e:
+                        logger.warning(f"get_rainforest data_fetch: {e}")
+                if df is None or df.empty:
+                    logger.info("get_rainforest: MT5 not connected, using synthetic data")
+                    df = _gen_synth()
+                    result["source"] = "synthetic"
                 if df is not None and not df.empty and _rainforest_detector.is_trained():
                     return _rainforest_detector.predict_regime(df)
                 return None

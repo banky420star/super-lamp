@@ -147,3 +147,65 @@ class FeatureAuditor:
         z = ((feature_df - feature_df.mean()) / (feature_df.std() + 1e-12)).abs()
         outlier = (z > z_thresh).mean().to_dict()
         return {"z_threshold": z_thresh, "outlier_rate": outlier}
+
+    def integrate_rf_importances(
+        self,
+        rf_importances: dict[str, float],
+        feature_names: list[str] | None = None,
+        dead_threshold: float = 0.01,
+    ) -> dict:
+        """
+        Integrate pre-computed Rainforest feature importances into the audit report.
+
+        Identifies top-contributing features and potential dead columns
+        (features with near-zero importance) from a trained RainforestDetector.
+
+        Args:
+            rf_importances: Dict of {feature_name: importance} from
+                RainforestDetector.export_feature_importances().
+            feature_names: Optional list of expected features. Missing ones
+                are flagged as missing.
+            dead_threshold: Importance below this value flags a feature as
+                potentially dead (default 0.01).
+
+        Returns:
+            Dict with top features, dead features, and coverage info.
+        """
+        if not rf_importances:
+            return {"ok": False, "error": "empty importances"}
+
+        sorted_feats = sorted(rf_importances.items(), key=lambda x: x[1], reverse=True)
+        top_n = sorted_feats[:10]
+
+        # Features with near-zero importance (potential dead columns)
+        dead_features = [(f, round(imp, 4)) for f, imp in sorted_feats if imp < dead_threshold]
+
+        result: dict = {
+            "ok": True,
+            "top_features": [
+                {"feature": f, "importance": round(imp, 4)}
+                for f, imp in top_n
+            ],
+            "dead_features": dead_features,
+            "dead_count": len(dead_features),
+            "dead_threshold": dead_threshold,
+            "importance_range": {
+                "min": round(sorted_feats[-1][1], 4) if sorted_feats else 0,
+                "max": round(sorted_feats[0][1], 4) if sorted_feats else 0,
+            },
+            "n_features": len(sorted_feats),
+        }
+
+        if feature_names:
+            missing = [f for f in feature_names if f not in rf_importances]
+            if missing:
+                result["missing_features"] = missing
+
+        active = len(sorted_feats) - len(dead_features)
+        logger.info(
+            f"FeatureAuditor: RF importances integrated — "
+            f"{active}/{len(sorted_feats)} active, "
+            f"{len(dead_features)} dead, "
+            f"top={top_n[0][0] if top_n else 'N/A'}"
+        )
+        return result
