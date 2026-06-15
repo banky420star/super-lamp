@@ -725,7 +725,17 @@ class PipelineOrchestrator:
                     "--feature_set_id", self.feature_set_id,
                 ]
                 train_lstm_main()
-                return {"ok": True}
+                # Capture model_id from the latest LSTM model subdirectory
+                _lstm_model_id = None
+                if os.path.isdir(model_dir):
+                    _lstm_subdirs = sorted(
+                        [d for d in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir, d))],
+                        key=lambda d: os.path.getmtime(os.path.join(model_dir, d)),
+                        reverse=True,
+                    )
+                    if _lstm_subdirs:
+                        _lstm_model_id = _lstm_subdirs[0]
+                return {"ok": True, "model_id": _lstm_model_id}
             except Exception as exc:
                 return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
             finally:
@@ -749,7 +759,18 @@ class PipelineOrchestrator:
             trainer_cls = _safe_import("Python.training.train_rainforest", "RainforestTrainer")
             if trainer_cls is None:
                 logger.warning("RainforestTrainer not found — using stub")
-                return {"ok": True, "stub": True, "reason": "module_not_found"}
+                # Still check if any rainforest model exists from a previous run
+                _rf_model_id = None
+                _rf_dir = os.path.join(_PROJECT_ROOT, "models", "rainforest")
+                if os.path.isdir(_rf_dir):
+                    _rf_subdirs = sorted(
+                        [d for d in os.listdir(_rf_dir) if os.path.isdir(os.path.join(_rf_dir, d))],
+                        key=lambda d: os.path.getmtime(os.path.join(_rf_dir, d)),
+                        reverse=True,
+                    )
+                    if _rf_subdirs:
+                        _rf_model_id = _rf_subdirs[0]
+                return {"ok": True, "stub": True, "reason": "module_not_found", "model_id": _rf_model_id}
 
             try:
                 import numpy as np
@@ -769,7 +790,18 @@ class PipelineOrchestrator:
                                 if rec.get("symbol") == self.symbol:
                                     rows.append(rec)
                 if len(rows) < 200:
-                    return {"ok": True, "stub": True, "reason": "insufficient_data", "rows": len(rows)}
+                    # Still check if any rainforest model exists from a previous run
+                    _rf_model_id = None
+                    _rf_dir = os.path.join(_PROJECT_ROOT, "models", "rainforest")
+                    if os.path.isdir(_rf_dir):
+                        _rf_subdirs = sorted(
+                            [d for d in os.listdir(_rf_dir) if os.path.isdir(os.path.join(_rf_dir, d))],
+                            key=lambda d: os.path.getmtime(os.path.join(_rf_dir, d)),
+                            reverse=True,
+                        )
+                        if _rf_subdirs:
+                            _rf_model_id = _rf_subdirs[0]
+                    return {"ok": True, "stub": True, "reason": "insufficient_data", "rows": len(rows), "model_id": _rf_model_id}
 
                 df = pd.DataFrame(rows)
                 for col in ["open", "high", "low", "close", "volume", "spread"]:
@@ -867,7 +899,8 @@ class PipelineOrchestrator:
                     "--feature_set_id", self.feature_set_id,
                 ]
                 train_dreamer_main()
-                return {"ok": True, "model_path": model_path}
+                _dreamer_model_id = os.path.basename(model_path).replace('.pt', '').replace('.pth', '')
+                return {"ok": True, "model_path": model_path, "model_id": _dreamer_model_id}
             except Exception as exc:
                 logger.warning(f"Dreamer training failed: {exc}")
                 return {"ok": True, "stub_disabled": True, "reason": str(exc)}
@@ -909,7 +942,18 @@ class PipelineOrchestrator:
                     "--feature_set_id", self.feature_set_id,
                 ]
                 train_ppo_main()
-                return {"ok": True, "timesteps": self.timesteps}
+                # Capture model_id from the latest PPO model subdirectory
+                _ppo_model_id = None
+                _ppo_dir = os.path.join(_PROJECT_ROOT, "models", "ppo")
+                if os.path.isdir(_ppo_dir):
+                    _ppo_subdirs = sorted(
+                        [d for d in os.listdir(_ppo_dir) if os.path.isdir(os.path.join(_ppo_dir, d))],
+                        key=lambda d: os.path.getmtime(os.path.join(_ppo_dir, d)),
+                        reverse=True,
+                    )
+                    if _ppo_subdirs:
+                        _ppo_model_id = _ppo_subdirs[0]
+                return {"ok": True, "timesteps": self.timesteps, "model_id": _ppo_model_id}
             except Exception as exc:
                 return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
             finally:
@@ -950,6 +994,20 @@ class PipelineOrchestrator:
                     feature_set_id=self.feature_set_id,
                     label_set_id=f"labels_{self.symbol}_{self.timeframe}",
                 )
+                # Populate model IDs from trained stages
+                _stages = self.state.get("stages", {})
+                _lstm_result = _stages.get("lstm_training", {})
+                if _lstm_result.get("model_id"):
+                    bundle.lstm_model_id = _lstm_result["model_id"]
+                _rf_result = _stages.get("rainforest_training", {})
+                if _rf_result.get("model_id"):
+                    bundle.rainforest_model_id = _rf_result["model_id"]
+                _dreamer_result = _stages.get("dreamer_training", {})
+                if _dreamer_result.get("model_id"):
+                    bundle.dreamer_model_id = _dreamer_result["model_id"]
+                _ppo_result = _stages.get("ppo_training", {})
+                if _ppo_result.get("model_id"):
+                    bundle.ppo_model_id = _ppo_result["model_id"]
                 bundle.status = "candidate"
                 path = bundle.save()
                 return {"ok": True, "bundle_id": bundle.bundle_id, "path": path}
