@@ -95,10 +95,26 @@ def _lazy_imports():
 
     try:
         from Python.rainforest_detector import RainforestDetector
+        from Python.features.audit_features import FeatureAuditor
         _rainforest_detector = RainforestDetector()
         model_path = str(PROJECT_ROOT / 'models' / 'rainforest_XAUUSDm.pkl')
         if os.path.exists(model_path):
             _rainforest_detector.load(model_path)
+            # ── Auto-audit: check Rainforest feature importances for dead columns ──
+            if _rainforest_detector.is_trained():
+                try:
+                    _rf_fi = _rainforest_detector.export_feature_importances()
+                    if _rf_fi:
+                        _rf_audit_result = FeatureAuditor().integrate_rf_importances(
+                            _rf_fi, dead_threshold=0.01,
+                        )
+                        if _rf_audit_result["dead_count"] > 0:
+                            logger.warning(
+                                f"Rainforest flags {_rf_audit_result['dead_count']} dead features: "
+                                f"{[d[0] for d in _rf_audit_result['dead_features'][:5]]}"
+                            )
+                except Exception:
+                    pass  # Non-critical
         else:
             logger.info(f"Rainforest model not found at {model_path} — needs training")
     except Exception as e:

@@ -571,6 +571,42 @@ class PipelineOrchestrator:
                 f"# Feature Audit Report\n\n"
                 f"**Issues:**\n" + "\n".join(f"- {i}" for i in issues) + "\n",
             )
+                        # Rainforest feature importance audit for dead-column detection
+            try:
+                from Python.rainforest_detector import RainforestDetector as _RFD
+                import os as _os
+                _rf_detector = _RFD()
+                _model_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "models")
+                _rf_importances = {}
+                if _os.path.isdir(_model_dir):
+                    for _fname in _os.listdir(_model_dir):
+                        if _fname.startswith("rainforest_") and _fname.endswith(".pkl"):
+                            _model_path = _os.path.join(_model_dir, _fname)
+                            if _rf_detector.load(_model_path):
+                                _fi = _rf_detector.export_feature_importances()
+                                if _fi:
+                                    _sym = _fname.replace("rainforest_", "").replace(".pkl", "")
+                                    _rf_importances[_sym] = _fi
+                if _rf_importances:
+                    from Python.features.audit_features import FeatureAuditor as _RFA
+                    _rf_audit = _RFA().integrate_rf_importances(
+                        list(_rf_importances.values())[0], dead_threshold=0.01)
+                    _NL = chr(10)
+                    _rf_report = _NL.join([
+                        "## Rainforest Feature Importance Audit",
+                        "- Top feature: " + str(_rf_audit['top_features'][0]['feature']) + " (" + str(_rf_audit['top_features'][0]['importance']) + ")",
+                        "- Dead features: " + str(_rf_audit['dead_count']) + "/" + str(_rf_audit['n_features']),
+                        "- Importance range: " + str(_rf_audit['importance_range']),
+                    ]) + _NL
+                    _write_report("feature_audit/FEATURE_AUDIT_REPORT.md", _rf_report)
+                    if _rf_audit["dead_count"] > 0:
+                        issues.append(
+                            f"Rainforest detected {_rf_audit['dead_count']} dead features "
+                            f"(importance < 0.01): {[d[0] for d in _rf_audit['dead_features'][:5]]}")
+            except Exception:
+                pass  # Rainforest audit is non-critical
+
+
             return {"ok": ok, "issues": issues}
 
         return self._run_stage("feature_audit", "feature_audit", _run)

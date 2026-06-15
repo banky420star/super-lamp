@@ -17,8 +17,18 @@ class FeatureAuditor:
         label_df: pd.DataFrame | None = None,
         regimes: pd.Series | None = None,
         live_feature_names: list[str] | None = None,
+        rf_importances: dict[str, float] | None = None,
+        rf_dead_threshold: float = 0.01,
     ) -> dict:
-        """Run all checks and return a composite report."""
+        """Run all checks and return a composite report.
+
+        Args:
+            rf_importances: Optional dict of feature_name -> importance from
+                RainforestDetector.export_feature_importances(). If provided,
+                dead-column detection is included in the report.
+            rf_dead_threshold: Importance below this value flags a feature as
+                potentially dead (default 0.01).
+        """
         self.report = {
             "leakage": self.check_leakage(feature_df, label_df),
             "correlation": self.check_correlation(feature_df),
@@ -36,6 +46,15 @@ class FeatureAuditor:
             "live_availability": self.check_live_availability(feature_df, live_feature_names),
             "missing_rate": self.check_missing_rate(feature_df),
             "outlier_rate": self.check_outlier_rate(feature_df),
+            "rf_importance_audit": (
+                self.integrate_rf_importances(
+                    rf_importances,
+                    feature_names=list(feature_df.columns),
+                    dead_threshold=rf_dead_threshold,
+                )
+                if rf_importances is not None
+                else None
+            ),
         }
         logger.info("FeatureAuditor: full audit complete")
         return self.report
