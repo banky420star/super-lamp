@@ -74,24 +74,24 @@ jobs:
       - name: Enforce no MT5, no broker, no training in Ubuntu CI (gate)
         run: |
           python -c '
-import sys, os
-print("CI platform:", sys.platform)
-try:
-    import MetaTrader5 as mt5
-    print("FAIL: MT5 imported on Linux CI - broker code must be stubbed only via mt5_compat")
-    sys.exit(1)
-except ImportError:
-    print("✓ OK: MT5 not importable (uses stub in mt5_compat.py) - no real broker/MT5 in Linux CI")
-except Exception as e:
-    print("✓ OK-ish: MT5 blocked with:", type(e).__name__)
-print("✓ Confirmed: Ubuntu CI limited to compile + unit; no MT5 init, no live broker, training excluded via filters.")
-# also check no accidental training/broker env bleed
-for bad in ["MT5", "broker", "LIVE"]:
-    for k in os.environ:
-        if bad in k.upper():
-            print("Note: env", k, "present but tests must respect")
-print("Gate: no MT5 in Linux CI enforced.")
-'
+          import sys, os
+          print("CI platform:", sys.platform)
+          try:
+              import MetaTrader5 as mt5
+              print("FAIL: MT5 imported on Linux CI - broker code must be stubbed only via mt5_compat")
+              sys.exit(1)
+          except ImportError:
+              print("✓ OK: MT5 not importable (uses stub in mt5_compat.py) - no real broker/MT5 in Linux CI")
+          except Exception as e:
+              print("✓ OK-ish: MT5 blocked with:", type(e).__name__)
+          print("✓ Confirmed: Ubuntu CI limited to compile + unit; no MT5 init, no live broker, training excluded via filters.")
+          # also check no accidental training/broker env bleed
+          for bad in ["MT5", "broker", "LIVE"]:
+              for k in os.environ:
+                  if bad in k.upper():
+                      print("Note: env", k, "present but tests must respect")
+          print("Gate: no MT5 in Linux CI enforced.")
+          '
 
       - name: Run unit tests (non-slow, non-training, non-broker)
         run: |
