@@ -582,13 +582,13 @@ def _get_mt5_account_and_positions() -> dict:
     try:
         from Python.mt5_compat import mt5
 
-        # Retry MT5 init a few times — terminal IPC may not be ready immediately after bridge startup
+        # Retry MT5 init (reduced for faster /api/status responses during launch health; paper path should hit first if paper_trader running)
         _mt5_ready = False
-        for _attempt in range(5):
+        for _attempt in range(2):
             if mt5.initialize():
                 _mt5_ready = True
                 break
-            time.sleep(1)
+            time.sleep(0.5)
         if not _mt5_ready:
             logger.debug("MT5 init failed in API status handler after 5 retries")
             return result
@@ -1289,6 +1289,30 @@ def api_status():
             "lane_summary": lane_summary,
             "ppo_per_symbol": progress.get("ppo_per_symbol", {}),
             **(_parallel_lane_status(srv)),
+            # Synthesize parallel_lanes for standalone launches (one-liner starts lane_b lstm externally).
+            # This makes TrainingPanel / UI see current 'training' for the launched symbols instead of old/stale from previous embedded runs or empty.
+            # The seed in start_platform.ps1 provides the ppo_*_progress.json that populates ppo_per_symbol.
+            "parallel_lanes": [
+                {
+                    "symbol": sym,
+                    "status": "training" if data.get("running") else "idle",
+                    "current_phase": "LSTM",
+                    "total_progress": float(data.get("progress_pct", 0)),
+                    "eta_seconds": None,
+                    "lstm": {
+                        "status": "training" if data.get("running") else "idle",
+                        "progress_pct": float(data.get("progress_pct", 0)),
+                        "epoch": int(data.get("epoch", 0) or 0),
+                        "epochs_total": int(data.get("epochs_total", 50000) or 50000),
+                        "loss": None,
+                        "val_loss": None,
+                        "fail_reason": None,
+                    },
+                    "ppo": {"status": "queued", "progress_pct": 0, "epoch": 0, "epochs_total": 0, "loss": None, "val_loss": None, "fail_reason": None},
+                    "dreamer": {"status": "queued", "progress_pct": 0, "epoch": 0, "epochs_total": 0, "loss": None, "val_loss": None, "fail_reason": None},
+                }
+                for sym, data in progress.get("ppo_per_symbol", {}).items()
+            ] if not _parallel_lane_status(srv).get("parallel_lanes") else [],
         },
         "canary_gate": {
             "ready": bool(canary_id),

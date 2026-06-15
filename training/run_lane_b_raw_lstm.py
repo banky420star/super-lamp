@@ -1,4 +1,6 @@
 """
+import json
+
 Lane B: Tamed Raw OHLCV + LSTM PPO — 3-seed walk-forward validation.
 
 Tier 3 fixes (Jun 2026):
@@ -27,6 +29,7 @@ Output: runtime/lane_b_raw_all_seeds.csv
 import sys, os, time, warnings, argparse
 import numpy as np
 import pandas as pd
+import json
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, "C:/supreme-chainsaw")
@@ -58,8 +61,8 @@ N_LSTM_LAYERS = 2
 FEATURES_DIM = 64
 
 # Taming parameters
-TURNOVER_COST = 0.0           # zero — removed direction trap
-CONCENTRATION_PENALTY = 0.0   # zero for discrete — no "extreme position" problem with Long/Flat/Short
+TURNOVER_COST = 0.0003       # restored — penalizes position changes
+CONCENTRATION_PENALTY = 0.0003  # restored — penalizes sitting at extreme positions
 COOLDOWN_STEPS = 5
 REWARD_HORIZON = 5            # predict 5-bar forward return
 REWARD_SCALE = 1000.0         # scale raw returns (~0.001) to PPO-friendly range (~1.0)

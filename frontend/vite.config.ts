@@ -13,19 +13,19 @@ try {
 }
 
 export default defineConfig({
-  base: '/app/',
+  base: '/',
   plugins: plugins,
   server: {
     port: 5173,
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5050',
+        target: 'http://localhost:5051',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'ws://localhost:5050',
+        target: 'ws://localhost:5051',
         ws: true,
         changeOrigin: true,
       },
