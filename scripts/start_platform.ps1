@@ -44,6 +44,18 @@ Write-Host "=== start_platform.ps1 - Safe Full Stack Launcher ===" -ForegroundCo
 Write-Host "Repo: $RepoRoot"
 Write-Host "Mode: $Mode | Symbols: $($Symbols -join ',')"
 
+# Find the project python (same logic as launch_full_project.ps1) so BG trainings/paper use the venv with deps, not system python (which may cause "not running" or import crashes).
+function Find-Python {
+    $cands = @(
+        (Join-Path $RepoRoot ".venv312\Scripts\python.exe"),
+        (Join-Path $RepoRoot ".venv\Scripts\python.exe")
+    )
+    foreach ($c in $cands) { if (Test-Path $c) { return $c } }
+    return "python"  # fallback (will likely fail for complex scripts)
+}
+$PythonExe = Find-Python
+Write-Host "Using python: $PythonExe"
+
 # Normalize Symbols if passed as single "XAU,BTC" string (common in one-liners) to array
 if ($Symbols.Count -eq 1 -and $Symbols[0] -like '*,*') {
     $Symbols = @($Symbols[0] -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -102,7 +114,7 @@ Write-Host "Envs set for paper + auto-gates."
 if ($Train) {
     Write-Host "Starting training processes..."
     foreach ($sym in $Symbols) {
-        $trainCmd = "python -u training/run_lane_b_raw_lstm.py --symbol $sym --steps $TrainSteps --max-dd -40"
+        $trainCmd = "& '$PythonExe' -u training/run_lane_b_raw_lstm.py --symbol $sym --steps $TrainSteps --max-dd -40"
         Write-Host "  BG: $trainCmd"
         Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$RepoRoot'; $trainCmd" -WindowStyle Hidden
     }
@@ -132,6 +144,14 @@ if ($Train) {
     }
 }
 
+# Start paper trader early (before full stack/launch) so that api_server /api/status takes the fast paper path (no MT5 init retries which can make health checks and UI data slow or timeout, causing "old information" in UI).
+if ($Paper) {
+    Write-Host "Starting paper trader early (for fast api/status)..."
+    $symList = ($Symbols -join ' ')
+    $paperCmd = "& '$PythonExe' -m Python.paper_trader --symbols $symList --equity 10000 --no-ollama --cycles 100"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$RepoRoot'; $paperCmd" -WindowStyle Hidden
+}
+
 # Start full stack (UI + api_server + supervisor orchestrator)
 # Use explicit sub-powershell -File + -Once so it runs to completion (health checks) then exits, leaving bg services; avoids splat/arg parse quirks and blocks until ready
 $launchPsArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $RepoRoot 'launch_full_project.ps1'), '-Once')
@@ -139,16 +159,8 @@ if ($DryRun) { $launchPsArgs += '-DryRun' }
 # Note: -Dashboard means start UI (default in launch); avoid -Preview to use hot-reload dev server on 5173
 # If user wants production preview, pass -Preview manually or extend params.
 Write-Host "Starting full stack launcher (via sub-powershell -Once; UI+api+supervisor will bg)..."
-$lp = Start-Process -FilePath 'powershell.exe' -ArgumentList $launchPsArgs -Wait -NoNewWindow -PassThru
-Write-Host "Full stack launcher exited (code: $($lp.ExitCode)) - services should be up."
-
-# Start paper trader for champion trading (if enabled) - uses the paper_trader.py (not execution subpkg)
-if ($Paper) {
-    Write-Host "Starting paper trader..."
-    $symList = ($Symbols -join ' ')
-    $paperCmd = "python -m Python.paper_trader --symbols $symList --equity 10000 --no-ollama --cycles 100"
-    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$RepoRoot'; $paperCmd" -WindowStyle Hidden
-}
+$lp = Start-Process -FilePath 'powershell.exe' -ArgumentList $launchPsArgs -WindowStyle Hidden -PassThru
+Write-Host "Full stack launcher started (PID: $($lp.Id)) - services should be up."
 
 Write-Host "=== Platform started in $Mode mode ===" -ForegroundColor Green
 Write-Host "React UI: http://localhost:5173/ (Vite dev; proxies /api to 5050)"

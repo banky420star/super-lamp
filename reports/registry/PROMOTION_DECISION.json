@@ -1,7 +1,7 @@
 {
   "decision": "demo_canary",
-  "symbol": "BTCUSDm",
-  "timeframe": "M15",
+  "symbol": "XAUUSDm",
+  "timeframe": "M5",
   "issues": [],
   "upstream": {
     "backtest": true,

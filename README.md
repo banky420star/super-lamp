@@ -1,5 +1,36 @@
 # supreme-chainsaw
 
+## Quick Start
+
+### 1. Start the API Server
+
+```bash
+.venv312/Scripts/python.exe Python/api_server.py
+```
+
+This starts the backend API on **port 5050** (required by the trading dashboard).
+
+### 2. Start the Trading Dashboard
+
+```bash
+cd frontend
+npm install   # first time only
+npm run dev
+```
+
+Open **http://localhost:5173** in your browser. The dashboard auto-refreshes every 15 seconds.
+
+### 3. Run the Autonomous Pipeline
+
+```bash
+# Full autonomous run (trains models, validates, promotes to champion)
+.venv312/Scripts/python.exe Python/autonomous/run_cycle.py     --symbol XAUUSDm --timeframe M5 --timesteps 500000     --feature-set-id prod_v1 --dataset-id prod_v1
+
+# Force champion promotion (bypass canary approval)
+.venv312/Scripts/python.exe Python/autonomous/run_cycle.py     --symbol XAUUSDm --timeframe M5 --timesteps 500000     --feature-set-id prod_v1 --dataset-id prod_v1 --force-champion
+```
+
+
 **Regime-routed PPO trading agent with real feature ablation testing for XAUUSDm (Gold).**
 
 ---
@@ -186,6 +217,83 @@ python training/run_real_feature_ablation.py \
 ```
 
 ---
+
+
+## Autonomous Pipeline
+
+The autonomous pipeline (`Python/autonomous/run_cycle.py`) runs the full training-to-deployment lifecycle:
+
+1. **Data Intake** - MT5 market data ingestion
+2. **Feature Factory** - 59 engineered features with ablation testing
+3. **Model Training** - LSTM, Rainforest, Dreamer, PPO models
+4. **Model Bundle** - Version-locked ensemble bundle with all model IDs
+5. **Validation** - Backtest court, walk-forward, baseline comparison
+6. **Promotion Gates** - 8 gate categories (data, training, performance, stability, baseline, canary, safety, execution)
+7. **Demo Canary** - Real backtester evaluation via FastBacktester
+8. **Champion Promotion** - Automated canary-to-champion promotion
+
+### CLI Usage
+
+```bash
+# Full autonomous run with force-champion (bypasses canary approval)
+python Python/autonomous/run_cycle.py     --symbol XAUUSDm --timeframe M5     --timesteps 500000     --feature-set-id prod_v1 --dataset-id prod_v1     --force-champion
+
+# Standard run (requires canary approval for champion promotion)
+python Python/autonomous/run_cycle.py     --symbol XAUUSDm --timeframe M5     --timesteps 500000     --feature-set-id prod_v1 --dataset-id prod_v1
+```
+
+### Champion Cycle
+
+`tools/champion_cycle.py` runs on a 30-minute loop (`tools/champion_cycle_loop.py`) to:
+- Train fresh candidate models
+- Evaluate candidates vs current champion
+- Promote winning candidates to canary status
+- Promote approved canaries to champion
+
+### Model Lifecycle
+
+```
+Train -> Bundle -> Validate -> Promotion Gates -> Demo Canary -> Champion
+```
+
+Bundle statuses: `candidate` | `validation_pending` | `rejected` | `demo_canary` | `champion` | `retired` | `quarantined`
+
+## Trading Dashboard
+
+The Vite + React frontend (`frontend/`) provides a real-time trading dashboard:
+
+- **Portfolio Overview** - Equity, daily P&L, floating P&L, drawdown
+- **Model Status** - Champion and canary models per symbol
+- **Pipeline Status** - All 11 pipeline stages
+- **Trade Summary** - Win rate, profit factor, total P&L
+- **Risk Limits** - Max daily loss, drawdown limits, trading halt status
+- **Recent Trades** - Trade history with entry/exit prices
+
+### Running the Dashboard
+
+```bash
+cd frontend
+npm install
+npm run dev    # Development server on port 5173
+npm run build  # Production build
+```
+
+The dashboard proxies API requests to `http://localhost:5050` (the AGI API server).
+
+## Promotion Gates
+
+The promotion gate system (`Python/registry/promotion_gates.py`) evaluates bundles across 8 categories:
+
+| Gate | Key Thresholds |
+|------|----------------|
+| Data | source=mt5, no leakage, feature audit passed |
+| Training | timesteps>=10K, seed logged, dataset/feature IDs |
+| Performance | OOS return>=2%, profit factor>=1.15, Sharpe>=0.50, max DD<=8% |
+| Stability | >=3 walk-forward windows, stress test passed |
+| Baseline | Beat random, buy-and-hold, previous champion |
+| Canary | >=50 trades, >=7 days, positive PnL |
+| Safety | No corruption, no outlier behavior |
+| Execution | Quality>=0.60, trailing success>=0.35, risk adherence>=0.80 |
 
 ## Branch Strategy
 

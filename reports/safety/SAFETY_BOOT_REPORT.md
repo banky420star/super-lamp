@@ -1,7 +1,6 @@
 # Safety Boot Report
 
 - Mode resolved: `paper_sim`
-- Account type: `unknown` | verified=False | balance=0.0 | equity=0.0
-- WARN: telemetry invalid but --require-mt5 not set
+- Account type: `demo` | verified=True | balance=665.5 | equity=665.5
 - Live gate: allowed=False | reason=config.allow_real_live=False
-- Telemetry check: ok=False | balance=None | equity=None
+- Telemetry check: ok=True | balance=665.5 | equity=665.5

@@ -1,4 +1,0 @@
-# Demo Canary Report
-
-**Issues:**
-

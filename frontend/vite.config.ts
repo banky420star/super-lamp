@@ -20,12 +20,12 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5051',
+        target: 'http://localhost:5050',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'ws://localhost:5051',
+        target: 'ws://localhost:5050',
         ws: true,
         changeOrigin: true,
       },

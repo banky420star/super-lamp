@@ -5,11 +5,12 @@
 ```json
 {
   "ok": true,
-  "timesteps": 1000,
+  "timesteps": 500000,
+  "model_id": "ppo_b0c0ae2d",
   "stage": "ppo_training",
-  "run_id": "run_20260510_093146_BTCUSDm_M15",
-  "symbol": "BTCUSDm",
-  "timeframe": "M15",
-  "timestamp": "2026-05-10T09:31:55.802043+00:00"
+  "run_id": "run_20260616_140802_XAUUSDm_M5",
+  "symbol": "XAUUSDm",
+  "timeframe": "M5",
+  "timestamp": "2026-06-16T14:38:02.190462+00:00"
 }
 ```

@@ -5,11 +5,12 @@
 ```json
 {
   "ok": true,
-  "model_path": "/Volumes/AI_DRIVE/trading bot/chain_gambler-main/models/dreamer/dreamer_BTCUSDm.pt",
+  "model_path": "C:\\supreme-chainsaw\\models\\dreamer\\dreamer_XAUUSDm.pt",
+  "model_id": "dreamer_XAUUSDm",
   "stage": "dreamer_training",
-  "run_id": "run_20260510_093146_BTCUSDm_M15",
-  "symbol": "BTCUSDm",
-  "timeframe": "M15",
-  "timestamp": "2026-05-10T09:31:54.662101+00:00"
+  "run_id": "run_20260616_140802_XAUUSDm_M5",
+  "symbol": "XAUUSDm",
+  "timeframe": "M5",
+  "timestamp": "2026-06-16T14:14:25.581372+00:00"
 }
 ```

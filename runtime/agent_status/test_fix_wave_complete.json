@@ -1,8 +1,0 @@
-{
-  "status": "TEST & FIX WAVE COMPLETE - AGENTS DEPLOYED AND ACTIVE",
-  "summary": "Following 'agents to test and fix errors', three specialized background agents were launched to ruthlessly validate the recent Dreamer+Rainforest+11 classical patterns+timing integration for Decision PPO rich edge. Multiple quick wins fixed immediately. Core stack (smoke 6/6, champion cycle 14/14) remains green. The new pattern+timing bias is already live and working in the ensemble (pattern_fav=True + time_exit_hints populated). No critical breaking bugs found in exercised paths. Agents continue deep hunting for latent issues (dims, Windows encoding, edge data, model loading, full rich execution telemetry).",
-  "agents_active": ["019e6f01-6ec7...", "019e6f01-7b10...", "019e6f01-86d8..."],
-  "fixes_applied": 2,
-  "positive_signals": "Ensemble now produces pattern-favorable rich intents. All mini pipeline watchers functional. Full E2E autonomous loop (ingestion to champion rich timed trades) still fully armed.",
-  "recommendation": "Let the 3 test/fix agents finish. Retrain Rainforest + decision_ppo/Dreamer on fresh data to realize the new classical pattern + timing edge. Use --mini on the TUI to watch everything."
-}

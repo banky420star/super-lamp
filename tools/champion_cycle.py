@@ -539,6 +539,22 @@ def main():
 
     _write_cycle_report(cycle_report)
     promoted = [row.get("symbol") for row in cycle_report["symbols"] if row.get("wins") and row.get("passes_thresholds")]
+
+    # Check for existing canaries ready for champion promotion
+    # Note: requires run_cycle.py stage_demo_canary to have run first and updated canary_state via update_canary_metrics
+    champion_promoted = []
+    for sym in symbols:
+        try:
+            can_promote, reason = reg.can_promote_canary(symbol=sym)
+            if can_promote:
+                reg.promote_canary_to_champion(symbol=sym)
+                champion_promoted.append(sym)
+                logger.success(f"Canary promoted to champion for {sym}")
+        except Exception as e:
+            logger.warning(f"Champion promotion check for {sym}: {e}")
+
+    if champion_promoted:
+        promoted.extend(champion_promoted)
     detail = f"promoted={','.join(str(x) for x in promoted) if promoted else 'none'}"
     alerter.training_cycle("complete", symbols, cycle_report, detail=detail)
 

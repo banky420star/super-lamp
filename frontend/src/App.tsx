@@ -1,414 +1,156 @@
-import React from 'react'
-import { StatusPayload, PatternRecord, SystemHeaderState } from './types'
-import {
-  fetchStatus,
-  fetchPatterns,
-  fetchPerf,
-  fetchPPODiagnostics,
-  fetchLSTMExplanations,
-  fetchLanes,
-  fetchScenarios,
-  fetchEconomicCalendar,
-  fetchSystemHeader,
-  fetchPipelineStages,
-  fetchModelBrains,
-  fetchTrainingLanes,
-  fetchRegistry,
-  fetchPromotionGates,
-  fetchDemoCanary,
-  fetchTradeCoroner,
-  fetchPatternsVerified,
-  fetchPerpetualImprovement,
-  fetchAgentsOperational,
-  fetchSafety,
-  fetchEvidence,
-  createStatusWS,
-  PPODiagnostics,
-  LSTMExplanation,
-  LaneStatus,
-  RegimesResponse,
-  EconomicEvent,
-} from './services/api'
+import React, { useState, useEffect, useCallback } from "react";
 
-import SystemCommandBar from './components/SystemCommandBar'
-import OverviewPanel from './components/OverviewPanel'
-import PipelinePanel from './components/PipelinePanel'
-import ModelBrainsPanel from './components/ModelBrainsPanel'
-import TrainingPanel from './components/TrainingPanel'
-import RegistryPanel from './components/RegistryPanel'
-import PromotionGatesPanel from './components/PromotionGatesPanel'
-import DemoCanaryPanel from './components/DemoCanaryPanel'
-import TradesPanel from './components/TradesPanel'
-import TradeCoronerPanel from './components/TradeCoronerPanel'
-import PatternsPanel from './components/PatternsPanel'
-import PerpetualPanel from './components/PerpetualPanel'
-import AgentsPanel from './components/AgentsPanel'
-import SafetyPanel from './components/SafetyPanel'
-import EvidenceLockerPanel from './components/EvidenceLockerPanel'
-import SettingsPanel from './components/SettingsPanel'
-import DashboardPanel from './components/DashboardPanel'
+type StatusData = {
+  mode?: string; can_trade?: boolean; uptime_seconds?: number;
+  symbols?: string[];
+  champion?: Record<string, {path?:string;model_id?:string;bundle_id?:string}>;
+  canary?: Record<string, {path?:string;model_id?:string;bundle_id?:string}>;
+  risk?: {
+    equity?:number; balance?:number; floating_pnl?:number; daily_pnl?:number;
+    drawdown_pct?:number; daily_trades?:number; max_daily_trades?:number;
+    halted?:boolean; halt_reason?:string; max_daily_loss_pct?:number; max_drawdown_pct?:number;
+  };
+};
 
-/* ─── New navigation tabs ─── */
-type TabId =
-  | 'overview' | 'pipeline' | 'model_brains' | 'training' | 'registry'
-  | 'promotion_gates' | 'demo_canary' | 'trades' | 'trade_coroner'
-  | 'patterns' | 'perpetual' | 'agents' | 'safety' | 'evidence'
-  | 'settings' | 'legacy_dashboard'
+type Trade = { id?:string; symbol?:string; side?:string; pnl?:number; entry_price?:number; exit_price?:number; exit_time?:string; };
+type Summary = { total_trades?:number; wins?:number; losses?:number; total_pnl?:number; profit_factor?:number; };
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'trades',          label: 'Trades'           },
-  { id: 'model_brains',    label: 'Model Brains'     },
-  { id: 'pipeline',        label: 'Pipeline'         },
-  { id: 'training',        label: 'Training'         },
-  { id: 'registry',        label: 'Registry'         },
-  { id: 'promotion_gates', label: 'Promotion Gates'  },
-  { id: 'demo_canary',     label: 'Demo Canary'      },
-  { id: 'trade_coroner',   label: 'Trade Coroner'    },
-  { id: 'patterns',        label: 'Patterns'         },
-  { id: 'perpetual',       label: 'Perpetual Improvement' },
-  { id: 'agents',          label: 'Agents'           },
-  { id: 'evidence',        label: 'Evidence Locker'  },
-  { id: 'settings',        label: 'Settings'         },
-  { id: 'overview',        label: 'System Truth'     },
-  { id: 'safety',          label: 'Safety Lock'      },
-]
+const fmt = (n: number | undefined | null, d = 2) => n != null ? n.toFixed(d) : "\u2014";
+const fmtPct = (n: number | undefined | null) => n != null ? (n * 100).toFixed(2) + "%" : "\u2014";
 
-const LOAD_STEPS = [
-  'INITIALIZING KERNEL...',
-  'MOUNTING FILESYSTEMS...',
-  'LOADING NEURAL WEIGHTS...',
-  'CALIBRATING RISK ENGINE...',
-  'CONNECTING MT5 BRIDGE...',
-  'HANDSHAKING BROKER...',
-  'LOADING MARKET DATA...',
-  'BUILDING FEATURE SPACE...',
-  'WARMING LSTM SEQUENCE MEMORY...',
-  'WARMING RAINFOREST REGIME DETECTOR...',
-  'WARMING PPO POLICY NETWORK...',
-  'DREAMER WORLD MODEL: STUBBED...',
-  'SYNCHRONIZING AGENT SWARM...',
-  'VERIFYING SAFETY GATES...',
-  'RUNNING TELEMETRY CHECK...',
-  'LOADING CHAMPION REGISTRY...',
-  'CHECKING DEMO CANARY STATUS...',
-  'REAL MONEY: LOCKED',
-  'ARMING EXECUTION GATES...',
-  'SYSTEM ONLINE',
-]
+function MetricCard({ title, value, sub, cls }: { title: string; value: string; sub?: string; cls?: string }) {
+  return (<div className="card"><h3>{title}</h3><div className={"value " + (cls || "")}>{value}</div>{sub && <div className="sub">{sub}</div>}</div>);
+}
 
-function LoadingScreen() {
-  const [step, setStep] = React.useState(0)
-  const [progress, setProgress] = React.useState(0)
+function StatusBadge({ mode }: { mode?: string }) {
+  if (mode === "LIVE") return <span className="badge badge-live">LIVE</span>;
+  if (mode === "DEMO") return <span className="badge badge-demo">DEMO</span>;
+  return <span className="badge badge-off">OFF</span>;
+}
 
-  React.useEffect(() => {
-    const targets = Array.from({ length: LOAD_STEPS.length }, (_, i) =>
-      Math.round(((i + 1) / LOAD_STEPS.length) * 100)
-    )
-    let i = 0
-    const advance = () => {
-      if (i >= targets.length) return
-      setProgress(targets[i])
-      setStep(i)
-      i++
-    }
-    advance()
-    const id = setInterval(advance, 280)
-    return () => clearInterval(id)
-  }, [])
+export default function App() {
+  const [status, setStatus] = useState<StatusData>({});
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [summary, setSummary] = useState<Summary>({});
+  const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [sRes, tRes, sumRes] = await Promise.all([
+        fetch("/api/status").then(r => r.json()).catch(() => ({})),
+        fetch("/api/trades?limit=50").then(r => r.json()).catch(() => ({ trades: [] })),
+        fetch("/api/trades/summary").then(r => r.json()).catch(() => ({})),
+      ]);
+      setStatus(sRes); setTrades(tRes.trades || tRes || []); setSummary(sumRes);
+      setLastUpdate(new Date());
+    } catch (e) { console.error("Fetch error:", e); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchData(); const iv = setInterval(fetchData, 15000); return () => clearInterval(iv); }, [fetchData]);
+
+  const risk = status.risk || {};
+  const symbols = status.symbols || [];
+  const pnlCls = (risk.daily_pnl || 0) >= 0 ? "positive" : "negative";
+  const floatCls = (risk.floating_pnl || 0) >= 0 ? "positive" : "negative";
+
+  const stages = ["MT5 Data Intake","Feature Factory","LSTM Training","PPO Training","Model Bundle","Backtest Court","Walk Forward","Baseline Comparison","Promotion Gates","Demo Canary","Champion Promotion"];
 
   return (
-    <div className="agit-loading">
-      <div className="agit-loading-sparks" aria-hidden="true">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <span
-            key={i}
-            style={{
-              '--x': `${10 + Math.random() * 80}%`,
-              '--y': `${20 + Math.random() * 60}%`,
-              '--d': `${3 + Math.random() * 3}s`,
-              '--delay': `${Math.random() * 2}s`,
-            } as React.CSSProperties}
-          />
-        ))}
-      </div>
-      <div className="agit-loading-core">
-        <div className="agit-loading-dot" />
-      </div>
-      <div className="agit-loading-content">
-        <div className="agit-loading-title">CHAIN GAMBLER</div>
-        <div className="agit-loading-sub">AUTONOMOUS TRADING STACK</div>
-        <div className="agit-loading-progress" style={{ position: 'relative' }}>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, #009db0, #00f0ff, #ff00a0)',
-              boxShadow: '0 0 8px rgba(0,240,255,0.4)',
-              width: `${progress}%`,
-              transition: 'width 0.45s cubic-bezier(0.4,0,0.2,1)',
-              borderRadius: 1,
-            }}
-          />
-        </div>
-        <div className="agit-loading-status">
-          <span
-            style={{
-              fontFamily: 'var(--mono)',
-              fontSize: '0.65rem',
-              color: 'var(--dim)',
-              letterSpacing: '0.1em',
-            }}
-          >
-            {LOAD_STEPS[step] ?? LOAD_STEPS[LOAD_STEPS.length - 1]}
-          </span>
+    <div className="app">
+      <div className="header">
+        <h1>Chain Gambler AGI</h1>
+        <div className="status">
+          <StatusBadge mode={status.mode} />
+          <span style={{ fontSize: 13, color: "var(--text2)" }}>Updated {lastUpdate.toLocaleTimeString()}</span>
+          <button className="refresh-btn" onClick={fetchData}>Refresh</button>
         </div>
       </div>
-    </div>
-  )
-}
 
-function LiveClock() {
-  const [time, setTime] = React.useState(new Date())
-  React.useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  const h = String(time.getUTCHours()).padStart(2, '0')
-  const m = String(time.getUTCMinutes()).padStart(2, '0')
-  const s = String(time.getUTCSeconds()).padStart(2, '0')
-  return (
-    <div className="agit-clock">
-      <span className="agit-clock-label">UTC</span>
-      <span>{h}</span>
-      <span style={{ animation: 'blink 1s step-end infinite' }}>:</span>
-      <span>{m}</span>
-      <span style={{ animation: 'blink 1s step-end infinite' }}>:</span>
-      <span>{s}</span>
-    </div>
-  )
-}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 80 }}>
+          <div className="spinner" />
+          <p style={{ marginTop: 12, color: "var(--text2)" }}>Loading dashboard...</p>
+        </div>
+      ) : (<>
+        <div className="grid grid-4">
+          <MetricCard title="Equity" value={"$" + fmt(risk.equity)} sub={"Balance: $" + fmt(risk.balance)} />
+          <MetricCard title="Daily P&L" value={"$" + fmt(risk.daily_pnl)} cls={pnlCls} />
+          <MetricCard title="Floating P&L" value={"$" + fmt(risk.floating_pnl)} cls={floatCls} sub={"Drawdown: " + fmtPct(risk.drawdown_pct)} />
+          <MetricCard title="Trades Today" value={(risk.daily_trades || 0) + " / " + (risk.max_daily_trades || "\u2014")} sub={risk.halted ? "HALTED: " + risk.halt_reason : "Trading Active"} />
+        </div>
 
-/* ─── Full pipeline state ─── */
-interface PipelineState {
-  status: StatusPayload | null
-  patterns: PatternRecord[]
-  perf: any
-  ppoDiag: PPODiagnostics | null
-  lstmExpl: Record<string, LSTMExplanation>
-  lanes: LaneStatus[]
-  scenarios: RegimesResponse
-  calendar: EconomicEvent[]
-  systemHeader: SystemHeaderState | null
-}
-
-const EMPTY_PIPELINE: PipelineState = {
-  status: null,
-  patterns: [],
-  perf: null,
-  ppoDiag: null,
-  lstmExpl: {},
-  lanes: [],
-  scenarios: { regimes: {} },
-  calendar: [],
-  systemHeader: null,
-}
-
-const App: React.FC = () => {
-  const [pipe, setPipe] = React.useState<PipelineState>(EMPTY_PIPELINE)
-  const [activeTab, setActiveTab] = React.useState<TabId>('trades')
-  const wsConnectedRef = React.useRef(false)
-  const [wsConnected, setWsConnected] = React.useState(false)
-
-  /* ─── Full pipeline refresh (non-status endpoints) ─── */
-  const refreshSideData = React.useCallback(async () => {
-    const [
-      patterns,
-      perf,
-      ppoDiag,
-      lstmExpl,
-      lanesRes,
-      scenarios,
-      calendar,
-      systemHeader,
-    ] = await Promise.allSettled([
-      fetchPatterns(),
-      fetchPerf(),
-      fetchPPODiagnostics(),
-      fetchLSTMExplanations(),
-      fetchLanes(),
-      fetchScenarios(),
-      fetchEconomicCalendar(7),
-      fetchSystemHeader(),
-    ])
-
-    setPipe((prev) => {
-      const next = { ...prev }
-      if (patterns.status === 'fulfilled') next.patterns = patterns.value ?? []
-      if (perf.status === 'fulfilled' && perf.value) next.perf = perf.value
-      if (ppoDiag.status === 'fulfilled') next.ppoDiag = ppoDiag.value
-      if (lstmExpl.status === 'fulfilled') next.lstmExpl = lstmExpl.value ?? {}
-      if (lanesRes.status === 'fulfilled') next.lanes = lanesRes.value?.lanes ?? []
-      if (scenarios.status === 'fulfilled') next.scenarios = scenarios.value ?? { regimes: {} }
-      if (calendar.status === 'fulfilled') next.calendar = calendar.value ?? []
-      if (systemHeader.status === 'fulfilled') next.systemHeader = systemHeader.value ?? null
-      return next
-    })
-  }, [])
-
-  /* ─── WebSocket + polling setup ─── */
-  React.useEffect(() => {
-    const initialRefresh = async () => {
-      const statusResult = await fetchStatus().catch(() => null)
-      if (statusResult) {
-        setPipe((prev) => ({ ...prev, status: statusResult }))
-      }
-      await refreshSideData()
-    }
-    initialRefresh()
-
-    const destroyWS = createStatusWS(
-      (data) => {
-        setPipe((prev) => ({ ...prev, status: data }))
-      },
-      (connected) => {
-        wsConnectedRef.current = connected
-        setWsConnected(connected)
-      }
-    )
-
-    const poll = async () => {
-      if (!wsConnectedRef.current) {
-        const statusResult = await fetchStatus().catch(() => null)
-        if (statusResult) {
-          setPipe((prev) => ({ ...prev, status: statusResult }))
-        }
-      }
-      await refreshSideData()
-    }
-
-    const interval = setInterval(poll, 10_000)
-
-    return () => {
-      destroyWS()
-      clearInterval(interval)
-    }
-  }, [refreshSideData])
-
-  /* Sync pattern library from live status */
-  React.useEffect(() => {
-    const lib = pipe.status?.training?.pattern_library
-    if (!lib) return
-    const records: PatternRecord[] = Object.entries(lib)
-      .map(([pattern_name, payload]) => ({ pattern_name, ...(payload || {}) }))
-      .sort((a, b) => new Date(b.discovered_at || 0).getTime() - new Date(a.discovered_at || 0).getTime())
-    setPipe((prev) => ({ ...prev, patterns: records.length > 0 ? records : prev.patterns }))
-  }, [pipe.status])
-
-  const refreshAll = React.useCallback(async () => {
-    const statusResult = await fetchStatus().catch(() => null)
-    if (statusResult) {
-      setPipe((prev) => ({ ...prev, status: statusResult }))
-    }
-    await refreshSideData()
-  }, [refreshSideData])
-
-  if (!pipe.status) return <LoadingScreen />
-
-  const { status, patterns, perf, ppoDiag, lstmExpl, lanes, scenarios, calendar, systemHeader } = pipe
-  const halted = status?.risk?.halt
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview':        return <OverviewPanel status={status!} header={systemHeader} />
-      case 'pipeline':        return <PipelinePanel />
-      case 'model_brains':    return <ModelBrainsPanel />
-      case 'training':        return <TrainingPanel status={status!} />
-      case 'registry':        return <RegistryPanel />
-      case 'promotion_gates': return <PromotionGatesPanel />
-      case 'demo_canary':     return <DemoCanaryPanel />
-      case 'trades':          return <TradesPanel calendar={calendar} />
-      case 'trade_coroner':   return <TradeCoronerPanel />
-      case 'patterns':        return <PatternsPanel patterns={patterns} status={status!} lstmExpl={lstmExpl} />
-      case 'perpetual':       return <PerpetualPanel />
-      case 'agents':          return <AgentsPanel />
-      case 'safety':          return <SafetyPanel />
-      case 'evidence':        return <EvidenceLockerPanel />
-      case 'settings':        return <SettingsPanel status={status!} />
-      case 'legacy_dashboard':return <DashboardPanel status={status!} />
-      default: return null
-    }
-  }
-
-  return (
-    <div className="agit-shell">
-      <div className="scanlines" />
-
-      <SystemCommandBar header={systemHeader} />
-
-      <nav className="agit-nav">
-        <div className="agit-nav-brand">
-          <div className="agit-nav-mark" />
-          <div>
-            <div className="agit-nav-title">CHAIN GAMBLER</div>
-            <div className="agit-nav-subtitle">Autonomous Trading Stack</div>
+        <div className="grid grid-2">
+          <div className="card">
+            <h3>Champion Models</h3>
+            {symbols.length > 0 ? symbols.map(sym => {
+              const ch = status.champion?.[sym];
+              return (<div className="model-card" key={sym}>
+                <div><div className="name">{sym}</div><div className="id">{ch?.model_id || ch?.bundle_id || "No champion"}</div></div>
+                <span className={"badge " + (ch?.model_id ? "badge-live" : "badge-off")}>{ch?.model_id ? "Active" : "None"}</span>
+              </div>);
+            }) : <p style={{ color: "var(--text2)", fontSize: 14 }}>No symbols configured</p>}
+          </div>
+          <div className="card">
+            <h3>Canary Models</h3>
+            {symbols.length > 0 ? symbols.map(sym => {
+              const cn = status.canary?.[sym];
+              return (<div className="model-card" key={sym}>
+                <div><div className="name">{sym}</div><div className="id">{cn?.model_id || cn?.bundle_id || "No canary"}</div></div>
+                <span className={"badge " + (cn?.model_id ? "badge-demo" : "badge-off")}>{cn?.model_id ? "Testing" : "None"}</span>
+              </div>);
+            }) : <p style={{ color: "var(--text2)", fontSize: 14 }}>No symbols configured</p>}
           </div>
         </div>
 
-        <div className="agit-nav-tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`agit-nav-tab${activeTab === tab.id ? ' active' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="grid grid-3" style={{ marginTop: 20 }}>
+          <div className="card">
+            <h3>Pipeline Status</h3>
+            {stages.map((s, i) => (<div className="pipeline-step" key={i}><div className="dot dot-green" /><span style={{ fontSize: 14 }}>{s}</span></div>))}
+          </div>
+          <div className="card">
+            <h3>Trade Summary</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Total Trades</span><div style={{ fontSize: 22, fontWeight: 700 }}>{summary.total_trades || 0}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Win Rate</span><div style={{ fontSize: 22, fontWeight: 700 }}>{summary.total_trades ? (((summary.wins || 0) / summary.total_trades) * 100).toFixed(1) + "%" : "\u2014"}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Profit Factor</span><div style={{ fontSize: 22, fontWeight: 700 }}>{fmt(summary.profit_factor)}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Total P&L</span><div style={{ fontSize: 22, fontWeight: 700 }} className={(summary.total_pnl || 0) >= 0 ? "positive" : "negative"}>${fmt(summary.total_pnl)}</div></div>
+            </div>
+          </div>
+          <div className="card">
+            <h3>Risk Limits</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Max Daily Loss</span><div style={{ fontSize: 18, fontWeight: 600 }}>{fmtPct(risk.max_daily_loss_pct)}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Max Drawdown</span><div style={{ fontSize: 18, fontWeight: 600 }}>{fmtPct(risk.max_drawdown_pct)}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Current Drawdown</span><div style={{ fontSize: 18, fontWeight: 600 }} className={(risk.drawdown_pct || 0) < 0.05 ? "positive" : "negative"}>{fmtPct(risk.drawdown_pct)}</div></div>
+              <div><span style={{ color: "var(--text2)", fontSize: 13 }}>Can Trade</span><div style={{ fontSize: 18, fontWeight: 600 }} className={status.can_trade ? "positive" : "negative"}>{status.can_trade ? "Yes" : "No"}</div></div>
+            </div>
+          </div>
         </div>
 
-        <div className="agit-nav-status">
-          <LiveClock />
-          {halted ? (
-            <span className="agit-pill agit-pill-halt">HALTED</span>
-          ) : (
-            <span className="agit-pill agit-pill-live">LIVE</span>
-          )}
-          {pipe.status?.system?.real_money_locked && (
-            <span className="agit-pill" style={{ background: 'var(--red)', color: '#fff', marginLeft: 6 }}>
-              LOCKED
-            </span>
-          )}
-          {pipe.status?.tests?.status === 'failing' && (
-            <span className="agit-pill" style={{ background: 'var(--amber)', color: '#000', marginLeft: 6 }}>
-              TESTS FAIL
-            </span>
-          )}
-          {pipe.status?.account?.telemetry_valid === false && (
-            <span className="agit-pill" style={{ background: 'var(--amber)', color: '#000', marginLeft: 6 }}>
-              TELEMETRY INVALID
-            </span>
-          )}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 11, color: wsConnected ? 'var(--green)' : 'var(--amber)',
-            marginLeft: 6,
-          }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: wsConnected ? 'var(--green)' : 'var(--amber)',
-              boxShadow: wsConnected ? '0 0 6px var(--green)' : 'none',
-              flexShrink: 0,
-            }} />
-            {wsConnected ? 'WS' : 'POLL'}
-          </span>
+        <div className="card" style={{ marginTop: 20 }}>
+          <h3>Recent Trades</h3>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Time</th></tr></thead>
+              <tbody>
+                {trades.length > 0 ? trades.slice(0, 20).map((t, i) => (
+                  <tr key={t.id || i}>
+                    <td style={{ fontWeight: 600 }}>{t.symbol || "\u2014"}</td>
+                    <td><span className={t.side === "buy" ? "positive" : "negative"}>{(t.side || "\u2014").toUpperCase()}</span></td>
+                    <td>{fmt(t.entry_price, 5)}</td>
+                    <td>{fmt(t.exit_price, 5)}</td>
+                    <td className={(t.pnl || 0) >= 0 ? "positive" : "negative"}>${fmt(t.pnl)}</td>
+                    <td style={{ color: "var(--text2)", fontSize: 13 }}>{t.exit_time ? new Date(t.exit_time).toLocaleString() : "\u2014"}</td>
+                  </tr>
+                )) : <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--text2)", padding: 24 }}>No trades recorded yet</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </nav>
-
-      <main className="agit-main animate-in">
-        {renderContent()}
-      </main>
+      </>)}
+      <div className="footer">Chain Gambler AGI &mdash; Autonomous Trading Pipeline</div>
     </div>
-  )
+  );
 }
-
-export default App

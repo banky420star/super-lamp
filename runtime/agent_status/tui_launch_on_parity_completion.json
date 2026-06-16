@@ -1,9 +1,0 @@
-﻿{
-    "name":  "TUI Launch on Parity Completion",
-    "last_updated":  "2026-05-28T14:22:27.8545990+02:00",
-    "phase":  "COMPLETED",
-    "current_focus":  "TUI running with full feature parity to React UI",
-    "workstream":  "Observability",
-    "status":  "completed",
-    "notes":  "Triggered after TUI parity agent finished. Using launch_tui.ps1 -Watcher -Persistent. All new panels (equity spark, model brains cards, pipeline stages grid, trades, gates, safety, evidence, coroner, registry) now live in terminal."
-}

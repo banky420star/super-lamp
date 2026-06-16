@@ -1,8 +1,8 @@
 # Data Validation Report
 
-**Symbol:** BTCUSDm
+**Symbol:** XAUUSDm
 
-**Timeframe:** M15
+**Timeframe:** M5
 
 **Recent raw files:** []
 
