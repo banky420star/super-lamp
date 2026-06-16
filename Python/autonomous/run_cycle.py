@@ -162,6 +162,29 @@ STAGES = [
 HARD_GATES = {"safety_boot", "feature_audit", "promotion_gates"}
 
 
+def _latest_model_subdir(model_dir: str) -> str | None:
+    """Return the name of the most recently modified subdirectory, or None."""
+    if not os.path.isdir(model_dir):
+        return None
+    try:
+        subdirs = sorted(
+            [d for d in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir, d))],
+            key=lambda d: os.path.getmtime(os.path.join(model_dir, d)),
+            reverse=True,
+        )
+        return subdirs[0] if subdirs else None
+    except OSError:
+        return None
+
+
+def _stale_aware_model_subdir(model_dir: str, pre_existing: set) -> str | None:
+    """Return the latest subdir only if it was not present before training."""
+    result = _latest_model_subdir(model_dir)
+    if result and result in pre_existing:
+        return None
+    return result
+
+
 class PipelineOrchestrator:
     """Runs the full Chain Gambler training-to-deployment pipeline."""
 
@@ -724,17 +747,12 @@ class PipelineOrchestrator:
                     "--dataset_id", self.dataset_id,
                     "--feature_set_id", self.feature_set_id,
                 ]
+                # Snapshot pre-existing model dirs for stale model guard
+                _pre_existing_lstm = set(
+                    d for d in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir, d))
+                ) if os.path.isdir(model_dir) else set()
                 train_lstm_main()
-                # Capture model_id from the latest LSTM model subdirectory
-                _lstm_model_id = None
-                if os.path.isdir(model_dir):
-                    _lstm_subdirs = sorted(
-                        [d for d in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir, d))],
-                        key=lambda d: os.path.getmtime(os.path.join(model_dir, d)),
-                        reverse=True,
-                    )
-                    if _lstm_subdirs:
-                        _lstm_model_id = _lstm_subdirs[0]
+                _lstm_model_id = _stale_aware_model_subdir(model_dir, _pre_existing_lstm)
                 return {"ok": True, "model_id": _lstm_model_id}
             except Exception as exc:
                 return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
@@ -759,17 +777,7 @@ class PipelineOrchestrator:
             trainer_cls = _safe_import("Python.training.train_rainforest", "RainforestTrainer")
             if trainer_cls is None:
                 logger.warning("RainforestTrainer not found — using stub")
-                # Still check if any rainforest model exists from a previous run
-                _rf_model_id = None
-                _rf_dir = os.path.join(_PROJECT_ROOT, "models", "rainforest")
-                if os.path.isdir(_rf_dir):
-                    _rf_subdirs = sorted(
-                        [d for d in os.listdir(_rf_dir) if os.path.isdir(os.path.join(_rf_dir, d))],
-                        key=lambda d: os.path.getmtime(os.path.join(_rf_dir, d)),
-                        reverse=True,
-                    )
-                    if _rf_subdirs:
-                        _rf_model_id = _rf_subdirs[0]
+                _rf_model_id = _latest_model_subdir(os.path.join(_PROJECT_ROOT, "models", "rainforest"))
                 return {"ok": True, "stub": True, "reason": "module_not_found", "model_id": _rf_model_id}
 
             try:
@@ -790,17 +798,7 @@ class PipelineOrchestrator:
                                 if rec.get("symbol") == self.symbol:
                                     rows.append(rec)
                 if len(rows) < 200:
-                    # Still check if any rainforest model exists from a previous run
-                    _rf_model_id = None
-                    _rf_dir = os.path.join(_PROJECT_ROOT, "models", "rainforest")
-                    if os.path.isdir(_rf_dir):
-                        _rf_subdirs = sorted(
-                            [d for d in os.listdir(_rf_dir) if os.path.isdir(os.path.join(_rf_dir, d))],
-                            key=lambda d: os.path.getmtime(os.path.join(_rf_dir, d)),
-                            reverse=True,
-                        )
-                        if _rf_subdirs:
-                            _rf_model_id = _rf_subdirs[0]
+                    _rf_model_id = _latest_model_subdir(os.path.join(_PROJECT_ROOT, "models", "rainforest"))
                     return {"ok": True, "stub": True, "reason": "insufficient_data", "rows": len(rows), "model_id": _rf_model_id}
 
                 df = pd.DataFrame(rows)
@@ -899,7 +897,7 @@ class PipelineOrchestrator:
                     "--feature_set_id", self.feature_set_id,
                 ]
                 train_dreamer_main()
-                _dreamer_model_id = os.path.basename(model_path).replace('.pt', '').replace('.pth', '')
+                _dreamer_model_id = os.path.splitext(os.path.basename(model_path))[0]
                 return {"ok": True, "model_path": model_path, "model_id": _dreamer_model_id}
             except Exception as exc:
                 logger.warning(f"Dreamer training failed: {exc}")
@@ -941,18 +939,13 @@ class PipelineOrchestrator:
                     "--dataset_id", self.dataset_id,
                     "--feature_set_id", self.feature_set_id,
                 ]
-                train_ppo_main()
-                # Capture model_id from the latest PPO model subdirectory
-                _ppo_model_id = None
+                # Snapshot pre-existing model dirs for stale model guard
                 _ppo_dir = os.path.join(_PROJECT_ROOT, "models", "ppo")
-                if os.path.isdir(_ppo_dir):
-                    _ppo_subdirs = sorted(
-                        [d for d in os.listdir(_ppo_dir) if os.path.isdir(os.path.join(_ppo_dir, d))],
-                        key=lambda d: os.path.getmtime(os.path.join(_ppo_dir, d)),
-                        reverse=True,
-                    )
-                    if _ppo_subdirs:
-                        _ppo_model_id = _ppo_subdirs[0]
+                _pre_existing_ppo = set(
+                    d for d in os.listdir(_ppo_dir) if os.path.isdir(os.path.join(_ppo_dir, d))
+                ) if os.path.isdir(_ppo_dir) else set()
+                train_ppo_main()
+                _ppo_model_id = _stale_aware_model_subdir(_ppo_dir, _pre_existing_ppo)
                 return {"ok": True, "timesteps": self.timesteps, "model_id": _ppo_model_id}
             except Exception as exc:
                 return {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
