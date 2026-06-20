@@ -326,3 +326,11 @@ See `SETUP.md` section 7 for full rules, separation of concerns, and "new branch
 | `22f334d` | Add bias layer diagnostics to harness |
 | `d69b800` | Upgrade harness to use AdaptiveLSTMFeatureExtractor |
 | `84d2fd4` | Real feature ablation harness created |
+
+## License
+
+Code under `02_Core_Python/` is derived from
+[`banky420star/upgraded-spoon`](https://github.com/banky420star/upgraded-spoon)
+and distributed under the MIT License as documented there. All other code in this
+repository is rights-reserved to the author(s) until a top-level
+`LICENSE` is added.
