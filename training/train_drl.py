@@ -2,6 +2,7 @@ import atexit
 import datetime
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 import time
@@ -346,6 +347,56 @@ def _env_str(name: str, default: str) -> str:
     if raw is None or str(raw).strip() == "":
         return str(default)
     return str(raw).strip()
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    """Truthy tokens: 1/true/yes/on/y. Falsy: 0/false/no/off/n/empty. Unknown -> warn + default."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    val = str(raw).strip().lower()
+    if val in ("1", "true", "yes", "on", "y"):
+        return True
+    if val in ("0", "false", "no", "off", "n", ""):
+        return False
+    logger.warning("AGI_DRL_OPTUNA_USE: unrecognized bool %r, defaulting to %s", val, default)
+    return default
+
+_OPTUNA_PENALTY_VALUE = -9999.0
+
+def _load_optuna_best_params(symbol: str, explicit_path: str | None = None) -> dict | None:
+    """Read best_params.json if AGI_DRL_OPTUNA_USE is truthy.
+
+    Path: AGI_DRL_OPTUNA_BEST_PATH > runtime/optuna_studies/{symbol}_best_params.json.
+    Returns the `params` dict (suitable for ppo_params_override) or None.
+    """
+    if not _env_bool("AGI_DRL_OPTUNA_USE", False):
+        return None
+    override = os.environ.get("AGI_DRL_OPTUNA_BEST_PATH")
+    path = Path(override) if override else Path("runtime/optuna_studies") / f"{symbol}_best_params.json"
+    if not path.exists():
+        # Silent: file missing is the default case for first-time runs; do not pollute logs.
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.warning("AGI_DRL_OPTUNA_USE: failed to parse %s: %s", path, e)
+        return None
+    study_val = float(data.get("value", 0.0))
+    if study_val <= _OPTUNA_PENALTY_VALUE:
+        logger.warning(
+            "AGI_DRL_OPTUNA_USE: study value=%.4f <= PENALTY; refusing to adopt failed-study params from %s",
+            study_val, path,
+        )
+        return None
+    params = data.get("params") or {}
+    if not params:
+        logger.warning("AGI_DRL_OPTUNA_USE: empty `params` in %s", path)
+        return None
+    logger.info(
+        "AGI_DRL_OPTUNA_USE: loaded %d params from %s (study value=%.4f, n_trials=%d)",
+        len(params), path.resolve(), study_val, data.get("n_trials", 0),
+    )
+    return params
 
 
 def _merge_dict(base: dict, override: dict) -> dict:
@@ -830,96 +881,6 @@ def _build_model(env, feature_version: str, ppo_params: dict):
                 policy_kwargs=_policy_kwargs_for(feature_version),                learning_rate=linear_schedule(ppo_params["learning_rate"]),                n_steps=ppo_params["n_steps"],                batch_size=ppo_params["batch_size"],                n_epochs=ppo_params["n_epochs"],                gamma=ppo_params["gamma"],                gae_lambda=ppo_params["gae_lambda"],                clip_range=ppo_params["clip_range"],                clip_range_vf=ppo_params.get("clip_range_vf"),                ent_coef=ppo_params["ent_coef"],                vf_coef=ppo_params["vf_coef"],                max_grad_norm=ppo_params["max_grad_norm"],                target_kl=ppo_params["target_kl"],                use_sde=ppo_params["use_sde"],                sde_sample_freq=ppo_params["sde_sample_freq"],                tensorboard_log=os.path.join(LOG_DIR, "drl_joint"),                device="cuda"                if torch.cuda.is_available()                else ("mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu"),                verbose=1,            )
 
 
-def _maybe_optimize_ppo_params(
-    df_pd: pd.DataFrame,
-    cfg: dict,
-    initial_balance: float,
-    reward_weights: dict,
-    trade_memory: dict | None,
-    feature_version: str,
-    action_config: dict | None = None,
-    symbol: str | None = None,
-) -> dict:
-    _require_training_stack()
-
-    drl_cfg = cfg.get("drl", {}) or {}
-    trials = int(drl_cfg.get("optuna_trials", 0) or 0)
-    if trials <= 0:
-        return _default_ppo_params()
-
-    try:
-        import optuna
-    except Exception as exc:
-        logger.warning(f"Optuna disabled because the package is unavailable: {exc}")
-        return _default_ppo_params()
-
-    timesteps = int(drl_cfg.get("optuna_timesteps", min(25_000, max(5_000, int(drl_cfg.get("total_timesteps", 100_000)) // 5))) or 10_000)
-    sample_rows = min(len(df_pd), max(2_000, int(drl_cfg.get("optuna_rows", 10_000) or 10_000)))
-    sample_df = df_pd.tail(sample_rows).copy()
-    df = pl.from_pandas(sample_df)
-
-    def objective(trial):
-        params = _default_ppo_params()
-        params["learning_rate"] = trial.suggest_float("learning_rate", 3e-5, 5e-4, log=True)
-        params["clip_range"] = trial.suggest_float("clip_range", 0.1, 0.3)
-        params["ent_coef"] = trial.suggest_float("ent_coef", 1e-4, 2e-2, log=True)
-        params["gae_lambda"] = trial.suggest_float("gae_lambda", 0.9, 0.99)
-
-        env = DummyVecEnv(
-            [
-                make_env(
-                    df,
-                    11,
-                    initial_balance,
-                    reward_weights,
-                    trade_memory=trade_memory,
-                    feature_version=feature_version,
-                    action_config=action_config,
-                    symbol=symbol,
-                )
-            ]
-        )
-        env = VecMonitor(env)
-        env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
-        eval_env = DummyVecEnv(
-            [
-                make_env(
-                    df,
-                    99,
-                    initial_balance,
-                    reward_weights,
-                    trade_memory=trade_memory,
-                    feature_version=feature_version,
-                    action_config=action_config,
-                    symbol=symbol,
-                )
-            ]
-        )
-        eval_env = VecMonitor(eval_env)
-        eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10.0)
-        eval_env.obs_rms = env.obs_rms
-        eval_env.training = False
-        eval_env.norm_reward = False
-
-        model = _build_model(env, feature_version, params)
-        callback = EvalCallback(eval_env, best_model_save_path=None, log_path=None, eval_freq=max(1_000, timesteps // 4), deterministic=True, render=False)
-        from stable_baselines3.common.callbacks import CallbackList
-        diag_callback = DiagnosticsCallback(log_interval=max(1_000, timesteps // 10))
-        model.learn(total_timesteps=timesteps, callback=CallbackList([callback, diag_callback]), progress_bar=False)
-        score = float(callback.best_mean_reward) if callback.best_mean_reward is not None else -1e9
-        env.close()
-        eval_env.close()
-        return score
-
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=trials, show_progress_bar=False)
-    best = _default_ppo_params()
-    if study.best_trial:
-        best.update(study.best_trial.params)
-        logger.info(f"Optuna best params selected: {study.best_trial.params}")
-    return best
-
-
 def _stage_candidate(
     symbols,
     total_timesteps,
@@ -1060,7 +1021,20 @@ def _stage_candidate(
     return candidate_path
 
 
-def _train_once(symbols: list[str], cfg: dict, total_timesteps: int, initial_balance: float, alerter=None, per_symbol_metrics: dict | None = None, realized_stats: dict | None = None):
+def _train_once(symbols: list[str], cfg: dict, total_timesteps: int, initial_balance: float, alerter=None, per_symbol_metrics: dict | None = None, realized_stats: dict | None = None, ppo_params_override: dict | None = None):
+    # Auto-inject Optuna best-params for symbols[0] if AGI_DRL_OPTUNA_USE is set AND
+    # no explicit ppo_params_override was passed by the caller.
+    if ppo_params_override is None:
+        primary_symbol = symbols[0] if symbols else None
+        if primary_symbol:
+            loaded = _load_optuna_best_params(primary_symbol)
+            if loaded:
+                ppo_params_override = loaded
+    else:
+        # Honour the explicit kwarg; warn only if the Optuna flag is also on so
+        # the user knows the file was not consulted.
+        if _env_bool("AGI_DRL_OPTUNA_USE", False):
+            logger.info("AGI_DRL_OPTUNA_USE: explicit ppo_params_override was supplied; ignoring best_params file")
     _require_training_stack()
     from analysis.gradient_flow_analyzer import LSTMGradientDiagnostics, DiagnosticsCallback
 
@@ -1322,16 +1296,8 @@ def _train_once(symbols: list[str], cfg: dict, total_timesteps: int, initial_bal
     env = VecMonitor(env)
     env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-    ppo_params = _maybe_optimize_ppo_params(
-        train_df,  # FIX-OOS-01: hyperparam search on train slice only (final eval on OOS)
-        cfg,
-        initial_balance,
-        reward_weights,
-        trade_memory,
-        feature_version,
-        action_config=action_cfg,
-        symbol=symbol_hint,
-    )
+    # Merge: trial-supplied override > env var defaults > hardcoded defaults.
+    ppo_params = {**_default_ppo_params(), **(ppo_params_override or {})}
     # NEW (v36+): Curriculum resume - load from checkpoint if AGI_RESUME_FROM is set
     resume_from = os.environ.get("AGI_RESUME_FROM", "")
     if resume_from:
