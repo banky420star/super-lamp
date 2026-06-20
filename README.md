@@ -331,6 +331,6 @@ See `SETUP.md` section 7 for full rules, separation of concerns, and "new branch
 
 Code under `02_Core_Python/` is derived from
 [`banky420star/upgraded-spoon`](https://github.com/banky420star/upgraded-spoon)
-and distributed under the MIT License as documented there. All other code in this
-repository is rights-reserved to the author(s) until a top-level
+and intended to be MIT-licensed. All other code in this
+repository is rights-reserved to the authors until a top-level
 `LICENSE` is added.
