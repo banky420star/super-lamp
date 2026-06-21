@@ -214,3 +214,12 @@ python training/run_real_feature_ablation.py \
 | `22f334d` | Add bias layer diagnostics to harness |
 | `d69b800` | Upgrade harness to use AdaptiveLSTMFeatureExtractor |
 | `84d2fd4` | Real feature ablation harness created |
+
+## License
+
+Code under `02_Core_Python/` is derived from
+[`banky420star/upgraded-spoon`](https://github.com/banky420star/upgraded-spoon)
+and is distributed under the MIT License as documented in
+[`02_Core_Python/NOTICE`](./02_Core_Python/NOTICE).
+All other code in this repository is licensed under
+[Apache License 2.0](./LICENSE); see also [`NOTICE`](./NOTICE).
