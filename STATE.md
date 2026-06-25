@@ -1,12 +1,13 @@
 # MT5 Quant Agent — System State
 
-**Last run:** 2026-06-25 02:32:16 UTC
-**Cycle:** 21
+**Last run:** 2026-06-25 02:36:17 UTC
+**Cycle:** 25
 **Mode:** mt5 (mt5_trading=True)
 **Dashboard:** http://127.0.0.1:8080
 
 ## Loop Status
 
+- history_loop: **OK**
 - data_loop: **OK**
 - feature_loop: **OK**
 - market_context_loop: **OK**
@@ -35,17 +36,17 @@
 
 ## Portfolio
 
-- Equity: $100.00
-- Open positions: 1
+- Equity: $102.56
+- Open positions: 4
 - Closed trades: 0
 
 ## Risk
 
 - Kill switch: **True**
-- Exposure used: 0.2%
-- Drawdown: 0.00%
+- Exposure used: 100.0%
+- Drawdown: 3.45%
 
 ## Memory / Edge DB
 
 - Memory records: 0
-- Edge DB records: 0
+- Edge DB records: 6

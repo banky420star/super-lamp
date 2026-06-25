@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from core.exposure import calc_risk_based_size, cap_size_to_exposure_limits
+from core.trade_limits import is_duplicate_position
 from core.utils import utc_now_iso
 
 
@@ -37,12 +38,16 @@ class PaperBroker:
         balance = balance_state or {"cash": starting_cash, "equity": starting_cash, "starting_cash": starting_cash}
 
         risk_pct = float(self.config["signals"].get("default_risk_percent", 1))
-        active_signal_ids = {p.get("signal_id") for p in positions}
+        executed_signal_ids = {p.get("signal_id") for p in positions if p.get("signal_id")}
 
         for record in approved:
             signal = record.get("signal", record)
-            sid = signal.get("signal_id")
-            if sid in active_signal_ids:
+            if is_duplicate_position(
+                self.config,
+                signal,
+                positions,
+                executed_signal_ids=executed_signal_ids,
+            ):
                 continue
 
             symbol = signal["symbol"]

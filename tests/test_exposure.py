@@ -19,6 +19,7 @@ from core.exposure import (
 )
 from core.paper_broker import PaperBroker
 from core.risk_manager import RiskManager
+from core.trade_limits import is_duplicate_position
 from core.verifier import Verifier
 
 
@@ -130,6 +131,56 @@ def test_paper_broker_blocks_oversized_exposure(config):
     assert len(rejected_orders) == 1
     assert rejected_orders[0]["error"] == "exposure_limit_exceeded"
     assert len(result["positions"]) == 1
+
+
+def test_pyramiding_allows_different_signals_same_side(config):
+    config["execution"]["mode"] = "mt5"
+    config["trading"]["allow_pyramiding"] = True
+    config["risk"]["unlimited_trades"] = False
+
+    existing = [{
+        "symbol": "XAUUSDm",
+        "side": "SELL",
+        "setup_type": "pullback",
+        "signal_id": "sig-a",
+        "ticket": 1001,
+    }]
+    new_signal = {
+        "signal_id": "sig-b",
+        "symbol": "XAUUSDm",
+        "side": "SELL",
+        "setup_type": "trend_continuation",
+        "entry": 2650.0,
+        "sl": 2660.0,
+        "tp1": 2635.0,
+        "confidence": 80,
+    }
+    assert is_duplicate_position(config, new_signal, existing) is False
+
+    same_setup_new_signal = {**new_signal, "signal_id": "sig-c", "setup_type": "pullback"}
+    assert is_duplicate_position(config, same_setup_new_signal, existing) is False
+
+    repeat_signal = {**new_signal, "signal_id": "sig-a"}
+    assert is_duplicate_position(config, repeat_signal, existing) is True
+
+
+def test_pyramiding_blocked_without_flag(config):
+    config["execution"]["mode"] = "mt5"
+    config["trading"]["allow_pyramiding"] = False
+    config["risk"]["unlimited_trades"] = False
+
+    existing = [{"symbol": "USOILm", "side": "BUY", "setup_type": "breakout"}]
+    signal = {
+        "signal_id": "sig-x",
+        "symbol": "USOILm",
+        "side": "BUY",
+        "setup_type": "pullback",
+        "entry": 70.0,
+        "sl": 69.0,
+        "tp1": 71.0,
+        "confidence": 80,
+    }
+    assert is_duplicate_position(config, signal, existing) is True
 
 
 def test_risk_state_includes_exposure_used_pct(config):

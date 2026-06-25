@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from core.mt5_client import MT5Client, format_mt5_connection_error, log_session_alignment
 from core.mt5_connection_manager import MT5ConnectionManager
 from core.position_sync import fetch_mt5_agent_positions
+from core.trade_limits import enrich_positions_with_orders
 from core.verifier import Verifier
 from core.utils import (
     fail_safe_missing,
@@ -123,6 +124,11 @@ def run() -> dict | None:
     candidates = candidates_data.get("candidates", [])
     features = read_json_state("features.json")
     active_positions, position_source = _collect_active_positions(config, logger)
+    orders_data = read_json_state("paper_orders.json", default={"orders": []})
+    active_positions = enrich_positions_with_orders(
+        active_positions,
+        orders_data.get("orders", []),
+    )
     kill_data = read_json_state("kill_switch.json", default={"kill_switch": False})
 
     spread_data, spread_source = _collect_spread_data(config, features, logger)

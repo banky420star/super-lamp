@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from core.exposure import check_exposure_limits
-from core.trade_limits import unlimited_trades
+from core.trade_limits import is_duplicate_position, unlimited_trades
 from core.utils import utc_now_iso
 
 
@@ -77,15 +77,19 @@ class Verifier:
         min_rr = float(self.config.get("signals", {}).get("min_risk_reward", 1.2))
         checks["risk_reward_safe"] = self._check_risk_reward(signal, min_rr=min_rr)
         if unlimited_trades(self.config):
-            checks["no_duplicate"] = True
             exposure_ok, exposure_details = True, {"unlimited_trades": True}
             checks["exposure_safe"] = True
         else:
-            checks["no_duplicate"] = not self._is_duplicate(signal, active_signals)
             exposure_ok, exposure_details = check_exposure_limits(active_signals, signal, equity, self.config)
             checks["exposure_safe"] = exposure_ok
             if not exposure_ok:
                 failures.append("exposure_limit_exceeded")
+
+        checks["no_duplicate"] = not is_duplicate_position(
+            self.config,
+            signal,
+            active_signals,
+        )
 
         checks["kill_switch_safe"] = not kill_switch
 
@@ -164,15 +168,3 @@ class Verifier:
             return False
         return (reward / risk) >= min_rr
 
-    def _is_duplicate(self, signal: dict[str, Any], active_signals: list[dict[str, Any]]) -> bool:
-        mode = self.config.get("execution", {}).get("mode", "paper")
-        for active in active_signals:
-            if active.get("symbol") != signal.get("symbol"):
-                continue
-            if active.get("side") != signal.get("side"):
-                continue
-            if mode == "mt5":
-                return True
-            if active.get("setup_type") == signal.get("setup_type"):
-                return True
-        return False

@@ -53,6 +53,8 @@ health:
 
 trading:
   aggressive_mode: true  # relax quality gates for more demo fills
+  allow_pyramiding: true  # stack positions from different signals (same symbol/side OK)
+  pyramid_block_same_setup: false  # false = allow same setup type from a new signal
 
 filters:
   min_volume_ratio: 0.3

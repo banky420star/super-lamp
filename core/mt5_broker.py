@@ -7,7 +7,8 @@ import uuid
 from typing import Any
 
 from core.exposure import calc_risk_based_size, cap_size_to_exposure_limits
-from core.trade_limits import unlimited_trades
+from core.position_sync import _setup_type_from_comment
+from core.trade_limits import enrich_positions_with_orders, is_duplicate_position
 from core.trade_tracker import TradeTracker
 from core.utils import read_json_state, utc_now_iso, write_json_state
 
@@ -51,7 +52,7 @@ class MT5Broker:
         executed = executed_signal_ids or self._executed_signal_ids(orders)
         placed: list[dict] = []
         errors: list[dict] = []
-        open_positions = self._sync_positions()
+        open_positions = enrich_positions_with_orders(self._sync_positions(), orders)
 
         for record in approved:
             signal = record.get("signal", record)
@@ -60,8 +61,18 @@ class MT5Broker:
                 self.logger.info("Skip %s — signal already executed", sid)
                 continue
 
-            if not unlimited_trades(self.config) and self._has_open_position(signal["symbol"], signal["side"]):
-                self.logger.info("Skip %s %s — position already open on MT5", signal["symbol"], signal["side"])
+            if is_duplicate_position(
+                self.config,
+                signal,
+                open_positions,
+                executed_signal_ids=executed,
+            ):
+                self.logger.info(
+                    "Skip %s %s %s — pyramid/duplicate rules",
+                    signal["symbol"],
+                    signal["side"],
+                    signal.get("setup_type"),
+                )
                 continue
 
             result = self._place_order(signal, account, open_positions)
@@ -86,7 +97,7 @@ class MT5Broker:
                     result.get("error"),
                 )
 
-        positions = self._sync_positions()
+        positions = enrich_positions_with_orders(self._sync_positions(), orders)
         balance = self._account_balance(account)
         tracker = TradeTracker(self.logger)
         trades, new_closed = tracker.sync_mt5_closed_deals(trades, self.magic)
@@ -262,19 +273,6 @@ class MT5Broker:
             return mt5.ORDER_FILLING_IOC
         return mt5.ORDER_FILLING_RETURN
 
-    def _has_open_position(self, symbol: str, side: str) -> bool:
-        positions = mt5.positions_get(symbol=symbol)
-        if not positions:
-            return False
-        for pos in positions:
-            if pos.magic != self.magic:
-                continue
-            if side == "BUY" and pos.type == mt5.POSITION_TYPE_BUY:
-                return True
-            if side == "SELL" and pos.type == mt5.POSITION_TYPE_SELL:
-                return True
-        return False
-
     def _sync_positions(self) -> list[dict[str, Any]]:
         positions = mt5.positions_get()
         if not positions:
@@ -294,6 +292,7 @@ class MT5Broker:
                 "size": float(pos.volume),
                 "profit": float(pos.profit),
                 "opened_at": utc_now_iso(),
+                "setup_type": _setup_type_from_comment(pos.comment),
                 "magic": pos.magic,
                 "comment": pos.comment,
             })
