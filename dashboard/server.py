@@ -48,7 +48,50 @@ HTML_PATH = Path(__file__).resolve().parent / "index.html"
 LOG_PATH = ROOT / "logs" / "system.log"
 
 
-def _build_symbol_cards(features: dict, market_ctx: dict, positions: dict) -> list[dict]:
+def _symbol_pnl_totals(
+    symbol: str,
+    positions: list[dict],
+    trades: list[dict],
+) -> dict[str, float | int | str | None]:
+    """Aggregate realized + unrealized PnL for one symbol across all trades/positions."""
+    sym_positions = [p for p in positions if p.get("symbol") == symbol]
+    sym_trades = [t for t in trades if t.get("symbol") == symbol]
+
+    unrealized = round(sum(float(p.get("profit", 0)) for p in sym_positions), 2)
+    realized = round(sum(float(t.get("pnl", 0)) for t in sym_trades), 2)
+    total = round(unrealized + realized, 2)
+
+    buy_count = sum(1 for p in sym_positions if p.get("side") == "BUY")
+    sell_count = sum(1 for p in sym_positions if p.get("side") == "SELL")
+    side_parts = []
+    if buy_count:
+        side_parts.append(f"{buy_count}× BUY")
+    if sell_count:
+        side_parts.append(f"{sell_count}× SELL")
+    position_summary = " · ".join(side_parts) if side_parts else None
+
+    wins = sum(1 for t in sym_trades if t.get("result") == "win")
+    losses = len(sym_trades) - wins
+
+    return {
+        "total_pnl": total,
+        "realized_pnl": realized,
+        "unrealized_pnl": unrealized,
+        "open_position_count": len(sym_positions),
+        "closed_trade_count": len(sym_trades),
+        "closed_wins": wins,
+        "closed_losses": losses,
+        "position_summary": position_summary,
+        "has_trading_activity": bool(sym_positions or sym_trades),
+    }
+
+
+def _build_symbol_cards(
+    features: dict,
+    market_ctx: dict,
+    positions: dict,
+    paper_trades: dict | None = None,
+) -> list[dict]:
     """Build one card per symbol from features.json schema — no signals required."""
     feat_symbols = features.get("symbols", {})
     if not feat_symbols:
@@ -56,16 +99,14 @@ def _build_symbol_cards(features: dict, market_ctx: dict, positions: dict) -> li
 
     ctx_root = market_ctx.get("market_context", market_ctx)
     ctx_symbols = ctx_root.get("symbols", {})
-    open_by_sym = {
-        p.get("symbol"): p
-        for p in (positions or {}).get("positions", [])
-    }
+    open_positions = list((positions or {}).get("positions", []))
+    closed_trades = list((paper_trades or {}).get("trades", []))
 
     cards = []
     for sym, feat in feat_symbols.items():
         ctx = ctx_symbols.get(sym, {})
         regime = ctx.get("market_regime", {})
-        pos = open_by_sym.get(sym)
+        pnl = _symbol_pnl_totals(sym, open_positions, closed_trades)
         cards.append({
             "symbol": feat.get("symbol", sym),
             "price": feat.get("price"),
@@ -90,9 +131,17 @@ def _build_symbol_cards(features: dict, market_ctx: dict, positions: dict) -> li
             "regime_description": regime.get("description"),
             "session": ctx.get("session"),
             "market_intent": ctx.get("market_intent"),
-            "has_position": pos is not None,
-            "position_side": pos.get("side") if pos else None,
-            "position_pnl": float(pos.get("profit", 0)) if pos else None,
+            "has_position": pnl["open_position_count"] > 0,
+            "position_side": pnl["position_summary"],
+            "position_pnl": pnl["unrealized_pnl"],
+            "total_pnl": pnl["total_pnl"],
+            "realized_pnl": pnl["realized_pnl"],
+            "unrealized_pnl": pnl["unrealized_pnl"],
+            "open_position_count": pnl["open_position_count"],
+            "closed_trade_count": pnl["closed_trade_count"],
+            "closed_wins": pnl["closed_wins"],
+            "closed_losses": pnl["closed_losses"],
+            "has_trading_activity": pnl["has_trading_activity"],
         })
     return cards
 
@@ -492,7 +541,12 @@ def aggregate_state() -> dict:
     positions_data = payload.get("paper_positions", {})
 
     payload["symbols"] = features_data.get("symbols", {})
-    payload["symbol_cards"] = _build_symbol_cards(features_data, market_ctx_data, positions_data)
+    payload["symbol_cards"] = _build_symbol_cards(
+        features_data,
+        market_ctx_data,
+        positions_data,
+        payload.get("paper_trades", {}),
+    )
     payload["live_portfolio"] = _build_live_portfolio(
         payload.get("account", {}),
         payload.get("paper_orders", {}),

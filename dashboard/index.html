@@ -667,7 +667,11 @@
           <div class="sym-card-row"><span>Support / Resist</span><strong>${fmt(c.support,2)} / ${fmt(c.resistance,2)}</strong></div>
           <div class="sym-card-row"><span>Volatility</span><strong class="${volcls}">${c.volatility_regime||"—"}</strong></div>
           <div class="sym-card-row"><span>Breakout</span><strong>${(c.breakout||"none").replace(/_/g," ")}</strong></div>
-          ${c.has_position ? `<div class="sym-card-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span>${c.position_side} PnL</span><strong style="color:${(c.position_pnl||0)>=0?"var(--green)":"var(--red)"}">$${fmt(c.position_pnl)}</strong></div>` : ""}
+          ${c.has_trading_activity ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+            <div class="sym-card-row"><span>Total PnL</span><strong style="color:${(c.total_pnl||0)>=0?"var(--green)":"var(--red)"}">${(c.total_pnl||0)>=0?"+":""}$${fmt(c.total_pnl)}</strong></div>
+            <div class="sym-card-row" style="font-size:11px"><span>Open ${c.open_position_count||0}${c.position_side ? " · "+c.position_side : ""}</span><strong style="color:${(c.unrealized_pnl||0)>=0?"var(--green)":"var(--red)"}">$${fmt(c.unrealized_pnl)}</strong></div>
+            <div class="sym-card-row" style="font-size:11px"><span>Closed ${c.closed_trade_count||0}${c.closed_trade_count ? " · "+(c.closed_wins||0)+"W/"+(c.closed_losses||0)+"L" : ""}</span><strong style="color:${(c.realized_pnl||0)>=0?"var(--green)":"var(--red)"}">$${fmt(c.realized_pnl)}</strong></div>
+          </div>` : ""}
         </div>`;
       }).join("");
     }
