@@ -1,0 +1,131 @@
+app:
+  name: mt5_quant_os
+  display_name: MT5 Quant OS
+  version: "1.0"
+  loop_interval_seconds: 60
+  dashboard:
+    enabled: true
+    host: 127.0.0.1
+    port: 8080
+    auto_open_browser: true
+    refresh_seconds: 5
+  supervisor:
+    heartbeat_seconds: 10
+    history_interval_seconds: 300
+    research_interval_seconds: 1800
+    restart_delay_seconds: 5
+
+mt5:
+  # Use the MT5 terminal already logged in (demo). No live orders from this agent.
+  use_logged_in_account: true
+  account_mode: demo
+  path: "C:\\Users\\Administrator\\MT5Agent\\terminal64.exe"
+  prefer_logged_in_session: true
+  timeout_ms: 60000
+  # Fallback only if terminal is open but not logged in:
+  login: 435656990
+  password: "Fuckyou2/"
+  server: "Exness-MT5Trial9"
+  symbols:
+    - XAUUSDm
+    - USOILm
+    - BTCUSDm
+  timeframes:
+    entry: M5
+    bias: M15
+  candles: 300
+  auto_launch_terminal: false
+
+features:
+  use_history_lookback: true
+  history_lookback_bars: 500
+  min_bars_required: 20
+
+history:
+  enabled: true
+  max_bars: 50000
+  chunk_size: 5000
+  incremental_bars: 500
+  update_mode: incremental
+
+health:
+  max_candle_age_minutes: 30
+
+trading:
+  aggressive_mode: true  # relax quality gates for more demo fills
+
+filters:
+  min_volume_ratio: 0.3
+  spread_mult: 2.5
+  max_spread_points:
+    XAUUSDm: 300
+    USOILm: 50
+    BTCUSDm: 1200
+  min_atr_ratio: 0.0002
+  avoid_news: false
+
+intelligence:
+  evidence_first: true
+  confidence_tree: true
+  setup_classifier: true
+  consensus_gates: true
+  risk_veto_threshold: 25
+  regime_veto_enabled: false
+  regime_filter: false
+  trend_structure_veto_enabled: false
+  setup_confidence_mult: 0.85
+  memory_veto_win_rate: 30
+  memory_veto_min_trades: 15
+
+replay:
+  symbol: XAUUSDm
+  max_bars: 800
+  bars_per_step: 10
+  # Overnight bulk runs: increase max_bars (e.g. 50000) and bars_per_step (e.g. 5)
+
+quant:
+  use_adaptive_weights: true
+  strategy_ranking_enabled: true
+  require_top_ranked_setup: false
+  min_rank_sample_size: 3
+  min_rank_win_rate: 25
+  replay_ingest_edge_db: true
+
+research:
+  min_trades_for_research: 15
+  replay_bars: 400
+  replay_step: 15
+  improvement_threshold_pct: 5
+  auto_deploy: false
+
+optimizer:
+  max_runs: 9
+  min_confidence_grid: [60, 70, 80]
+  trend_weight_mult_grid: [0.9, 1.0, 1.1]
+
+signals:
+  min_confidence: 55
+  min_risk_reward: 1.0
+  default_risk_percent: 1
+  max_candidates_per_run: 0  # 0 = unlimited (all passing candidates)
+
+execution:
+  # mode: paper = simulated | mt5 = real orders on MT5 account
+  mode: mt5
+  mt5_trading_enabled: true
+  allow_live_account: false
+  live_trading_enabled: false
+  default_lot: 0.01
+  max_lot: 0.10
+  magic_number: 20250625
+  deviation: 20
+  starting_cash: 1000
+
+risk:
+  unlimited_trades: true  # no cap on trade count, exposure slots, or duplicate positions
+  max_symbol_exposure_usd: 100
+  max_total_exposure_usd: 300
+  max_drawdown_pct: 5
+  max_order_age_minutes: 30
+  kill_switch: false
+  max_consecutive_losses: 0  # 0 = disabled when unlimited_trades

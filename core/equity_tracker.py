@@ -1,0 +1,247 @@
+"""Equity curve — snapshot history and curve reconstruction."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from core.utils import read_json_state, utc_now_iso, write_json_state
+
+MAX_POINTS = 5000
+
+
+def record_snapshot(
+    equity: float,
+    cash: float | None = None,
+    *,
+    source: str = "risk_loop",
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Append an equity snapshot (skip duplicate within same minute)."""
+    history = read_json_state("equity_history.json", default={"points": []})
+    points: list[dict[str, Any]] = list(history.get("points", []))
+    now = utc_now_iso()
+    minute = now[:16]
+    cash_val = round(float(cash if cash is not None else equity), 2)
+    equity_val = round(float(equity), 2)
+    unrealized = round(equity_val - cash_val, 2)
+
+    point = {
+        "ts": now,
+        "equity": equity_val,
+        "cash": cash_val,
+        "balance": cash_val,
+        "unrealized_pnl": unrealized,
+        "source": source,
+        **(extra or {}),
+    }
+
+    if points and str(points[-1].get("ts", ""))[:16] == minute:
+        points[-1] = point
+    else:
+        points.append(point)
+
+    if len(points) > MAX_POINTS:
+        points = points[-MAX_POINTS:]
+
+    payload = {
+        "timestamp": now,
+        "count": len(points),
+        "starting_equity": points[0]["equity"] if points else equity_val,
+        "latest_equity": equity_val,
+        "points": points,
+    }
+    write_json_state("equity_history.json", payload)
+    return payload
+
+
+def build_equity_curve(
+    paper_orders: dict[str, Any] | None = None,
+    paper_trades: dict[str, Any] | None = None,
+    account: dict[str, Any] | None = None,
+    risk_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Build equity curve for dashboard.
+
+    Uses live snapshots when available; supplements with trade-based
+    reconstruction for closed PnL events.
+    """
+    paper_orders = paper_orders or read_json_state("paper_orders.json", default={})
+    paper_trades = paper_trades or read_json_state("paper_trades.json", default={})
+    account = account or read_json_state("account.json", default={})
+    risk_state = risk_state or read_json_state("risk_state.json", default={})
+    baseline = read_json_state("mt5_baseline.json", default={})
+    history = read_json_state("equity_history.json", default={"points": []})
+
+    balance = paper_orders.get("balance", {})
+    order_account = paper_orders.get("account", {})
+    starting = float(
+        balance.get("starting_cash")
+        or baseline.get("starting_cash")
+        or account.get("balance")
+        or 1000.0
+    )
+    current_equity = float(
+        account.get("equity")
+        or order_account.get("equity")
+        or balance.get("equity")
+        or account.get("balance")
+        or risk_state.get("equity")
+        or starting
+    )
+    current_cash = float(
+        account.get("balance")
+        or order_account.get("balance")
+        or balance.get("cash")
+        or current_equity
+    )
+    unrealized = round(current_equity - current_cash, 2)
+
+    trades = sorted(
+        paper_trades.get("trades", []),
+        key=lambda t: t.get("closed_at") or "",
+    )
+
+    trade_points: list[dict[str, Any]] = []
+    equity = starting
+    markers: list[dict[str, Any]] = []
+    if trades:
+        first_ts = trades[0].get("closed_at") or utc_now_iso()
+        trade_points.append({
+            "ts": first_ts,
+            "equity": round(starting, 2),
+            "cash": round(starting, 2),
+            "event": "start",
+        })
+        for trade in trades:
+            pnl = float(trade.get("pnl", 0))
+            equity += pnl
+            ts = trade.get("closed_at") or utc_now_iso()
+            trade_points.append({
+                "ts": ts,
+                "equity": round(equity, 2),
+                "cash": round(equity, 2),
+                "event": "trade_close",
+                "pnl": round(pnl, 2),
+                "symbol": trade.get("symbol"),
+                "result": trade.get("result"),
+            })
+            markers.append({
+                "ts": ts,
+                "equity": round(equity, 2),
+                "event": "trade_close",
+                "pnl": round(pnl, 2),
+                "symbol": trade.get("symbol"),
+                "side": trade.get("side"),
+                "result": trade.get("result"),
+            })
+
+    snapshot_points = [
+        {
+            "ts": p["ts"],
+            "equity": p["equity"],
+            "cash": p.get("cash", p.get("balance", p["equity"])),
+            "unrealized_pnl": p.get("unrealized_pnl"),
+            "drawdown": p.get("drawdown"),
+            "event": "snapshot",
+            "source": p.get("source"),
+        }
+        for p in history.get("points", [])
+    ]
+    merged = _merge_points(trade_points, snapshot_points)
+
+    now = utc_now_iso()
+    if not merged:
+        merged = [{
+            "ts": now,
+            "equity": round(current_equity, 2),
+            "cash": round(current_cash, 2),
+            "unrealized_pnl": unrealized,
+            "event": "current",
+        }]
+    elif abs(merged[-1]["equity"] - current_equity) > 0.001 or merged[-1]["ts"][:16] != now[:16]:
+        merged.append({
+            "ts": now,
+            "equity": round(current_equity, 2),
+            "cash": round(current_cash, 2),
+            "unrealized_pnl": unrealized,
+            "drawdown": risk_state.get("drawdown"),
+            "event": "current",
+        })
+
+    peak = starting
+    max_drawdown_pct = 0.0
+    enriched: list[dict[str, Any]] = []
+    for point in merged:
+        eq = float(point["equity"])
+        peak = max(peak, eq)
+        dd_pct = round((peak - eq) / peak * 100, 2) if peak > 0 else 0.0
+        max_drawdown_pct = max(max_drawdown_pct, dd_pct)
+        cash = float(point.get("cash", eq))
+        enriched.append({
+            **point,
+            "peak_equity": round(peak, 2),
+            "drawdown_pct": dd_pct,
+            "unrealized_pnl": point.get("unrealized_pnl", round(eq - cash, 2)),
+        })
+
+    pnl_total = round(current_equity - starting, 2)
+    pnl_pct = round((pnl_total / starting * 100) if starting else 0.0, 2)
+    session_start = enriched[0]["equity"] if enriched else starting
+    session_pnl = round(current_equity - session_start, 2)
+
+    return {
+        "starting_equity": round(starting, 2),
+        "current_equity": round(current_equity, 2),
+        "current_balance": round(current_cash, 2),
+        "unrealized_pnl": unrealized,
+        "peak_equity": round(max((p["equity"] for p in enriched), default=starting), 2),
+        "max_drawdown_pct": round(max_drawdown_pct, 2),
+        "pnl_total": pnl_total,
+        "pnl_pct": pnl_pct,
+        "session_pnl": session_pnl,
+        "trade_count": len(trades),
+        "point_count": len(enriched),
+        "points": enriched,
+        "markers": markers,
+        "range": _curve_range(enriched, starting),
+    }
+
+
+def _curve_range(points: list[dict[str, Any]], starting: float) -> dict[str, Any]:
+    if not points:
+        return {"min_equity": starting, "max_equity": starting}
+    equities = [float(p["equity"]) for p in points]
+    balances = [float(p.get("cash", p["equity"])) for p in points]
+    return {
+        "min_equity": round(min(equities + [starting]), 2),
+        "max_equity": round(max(equities + [starting]), 2),
+        "min_balance": round(min(balances + [starting]), 2),
+        "max_balance": round(max(balances + [starting]), 2),
+        "first_ts": points[0].get("ts"),
+        "last_ts": points[-1].get("ts"),
+    }
+
+
+def _merge_points(
+    trade_points: list[dict[str, Any]],
+    snapshot_points: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge trade-derived and snapshot series by timestamp."""
+    combined = trade_points + snapshot_points
+    if not combined:
+        return []
+    combined.sort(key=lambda p: p.get("ts", ""))
+    merged: list[dict[str, Any]] = []
+    seen_minutes: set[str] = set()
+    for point in combined:
+        minute = str(point.get("ts", ""))[:16]
+        if minute in seen_minutes and point.get("event") == "snapshot":
+            for i in range(len(merged) - 1, -1, -1):
+                if str(merged[i].get("ts", ""))[:16] == minute:
+                    merged[i] = point
+                    break
+            continue
+        seen_minutes.add(minute)
+        merged.append(point)
+    return merged
